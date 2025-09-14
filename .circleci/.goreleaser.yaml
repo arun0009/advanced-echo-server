@@ -1,0 +1,73 @@
+# .goreleaser.yaml
+project_name: advanced-echo-server
+builds:
+  - id: default
+    main: ./cmd/advanced-echo-server
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+    binary: advanced-echo-server
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - config.yaml
+  - format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - config.yaml
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: arun0009
+    name: advanced-echo-server
+    draft: false
+    prerelease: false
+    disable_upload: false
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+snapshot:
+  name_template: "{{ .Tag }}-snapshot"
+
+brews:
+  - name: advanced-echo-server
+    github:
+      owner: arun0009
+      name: advanced-echo-server
+    homepage: https://github.com/arun0009/advanced-echo-server
+    install: bin.install "advanced-echo-server"
+    test: "advanced-echo-server --help"
+
+dockers:
+  - image_templates:
+      - "arun0009/advanced-echo-server:{{ .Tag }}"
+    build_flag_templates:
+      - "--platform linux/amd64,linux/arm64"
+    dockerfile: ./Dockerfile
+    skip_push: false
+
+before:
+  hooks:
+    - go mod tidy
