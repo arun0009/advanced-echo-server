@@ -230,7 +230,7 @@ services:
       - ./certs:/certs
 ```
 
-## 📚 API Reference
+## API Reference
 
 ### Endpoints
 
@@ -242,7 +242,7 @@ services:
 | `GET` | `/web-ws` | WebSocket testing interface |
 | `GET` | `/web-sse` | Server-Sent Events testing interface |
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Here's how you can help:
 
@@ -278,12 +278,12 @@ Please use the [GitHub Issues](https://github.com/arun0009/advanced-echo-server/
 - Detailed description of the issue
 - Steps to reproduce
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 
-## 📊 Stats
+## Stats
 
 ![GitHub stars](https://img.shields.io/github/stars/arun0009/advanced-echo-server?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/arun0009/advanced-echo-server?style=social)
