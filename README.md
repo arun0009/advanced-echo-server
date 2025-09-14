@@ -50,21 +50,18 @@ ECHO_CHAOS=5 go run ./cmd/advanced-echo-server/main.go
 
 # Run with Docker
 
-The easiest way to get started is with Docker Compose.
+The easiest way to get started is to pull the pre-built image from Docker Hub.
 
 ```bash
-docker-compose up --build
-```
+# Pull the latest image
+docker pull arun0009/advanced-echo-server:latest
 
-You can also run a single container directly.
-
-```bash
 # Run with a 1-second delay and a custom header
 docker run -p 8080:8080 \
   -e ECHO_DELAY=1000 \
   -e ECHO_HEADER_X_Trace_ID=abc-123 \
-  your-docker-image-name
-  ```
+  arun0009/advanced-echo-server:latest
+```
 
 # Configuration & Usage
 
