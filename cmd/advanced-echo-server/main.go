@@ -16,7 +16,7 @@ import (
 	"log"
 	"math"
 	"math/big"
-	mrand "math/rand" // Alias math/rand to avoid conflict with crypto/rand
+	mrand "math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -78,24 +78,25 @@ type Scenario struct {
 // Response defines a single response in a scenario
 type Response struct {
 	Status int    `yaml:"status" json:"status"`
-	Delay  string `yaml:"delay" json:"delay"` // e.g., "500ms", "100-500ms"
+	Delay  string `yaml:"delay" json:"delay"`
 	Body   string `yaml:"body" json:"body"`
 }
 
 // Global state for metrics, counters, and scenarios
 var (
-	config    Config
-	startTime time.Time
-	upgrader  = websocket.Upgrader{
+	configLock sync.RWMutex
+	config     Config
+	startTime  time.Time
+	upgrader   = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
-	rng            = mrand.New(mrand.NewSource(time.Now().UnixNano())) // Use mrand
+	rng            = mrand.New(mrand.NewSource(time.Now().UnixNano()))
 	requestCounter uint64
 	counterMutex   sync.Mutex
-	scenarios      sync.Map // map[string][]Response (path -> response sequence)
-	scenarioIndex  sync.Map // map[string]int (path -> current index)
+	scenarios      sync.Map
+	scenarioIndex  sync.Map
 	requestHistory []RequestRecord
 	historyMutex   sync.Mutex
 	rateLimiter    *rate.Limiter
@@ -130,6 +131,7 @@ func init() {
 	startTime = time.Now()
 
 	// Load configuration from environment variables
+	configLock.Lock()
 	config = Config{
 		Port:           getEnv("PORT", "8080"),
 		EnableTLS:      getEnv("ENABLE_TLS", "false") == "true",
@@ -139,27 +141,35 @@ func init() {
 		LogRequests:    getEnv("LOG_REQUESTS", "true") == "true",
 		LogHeaders:     getEnv("LOG_HEADERS", "false") == "true",
 		LogBody:        getEnv("LOG_BODY", "false") == "true",
-		MaxBodySize:    parseInt64(getEnv("MAX_BODY_SIZE", "10485760")), // 10MB
+		MaxBodySize:    parseInt64(getEnv("MAX_BODY_SIZE", "10485760")),
 		HistorySize:    int(parseInt64(getEnv("ECHO_HISTORY_SIZE", "100"))),
 		ScenarioFile:   getEnv("ECHO_SCENARIO_FILE", "scenarios.yaml"),
 		RateLimitRPS:   parseFloat64(getEnv("ECHO_RATE_LIMIT_RPS", "0")),
 		RateLimitBurst: int(parseInt64(getEnv("ECHO_RATE_LIMIT_BURST", "0"))),
 	}
+	configLock.Unlock()
 
 	hostname, _ := os.Hostname()
+	configLock.Lock()
 	config.Hostname = hostname
+	configLock.Unlock()
 
 	// Initialize request history
+	configLock.RLock()
 	if config.HistorySize > 0 {
 		requestHistory = make([]RequestRecord, 0, config.HistorySize)
 	}
+	configLock.RUnlock()
 
 	// Initialize rate limiter
+	configLock.RLock()
 	if config.RateLimitRPS > 0 && config.RateLimitBurst > 0 {
 		rateLimiter = rate.NewLimiter(rate.Limit(config.RateLimitRPS), config.RateLimitBurst)
 	}
+	configLock.RUnlock()
 
 	// Load scenarios from YAML if specified
+	configLock.RLock()
 	if config.ScenarioFile != "" {
 		if data, err := os.ReadFile(config.ScenarioFile); err == nil {
 			var sc []Scenario
@@ -173,6 +183,7 @@ func init() {
 			}
 		}
 	}
+	configLock.RUnlock()
 
 	// Register Prometheus metrics
 	prometheus.MustRegister(requestTotal, requestLatency, chaosErrors)
@@ -225,19 +236,35 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		if config.LogRequests {
+		// Protect access to config fields
+		configLock.RLock()
+		logRequests := config.LogRequests
+		logHeaders := config.LogHeaders
+		logBody := config.LogBody
+		configLock.RUnlock()
+
+		if logRequests {
 			log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 		}
-
-		if config.LogHeaders {
+		if logHeaders {
 			log.Printf("Headers: %+v", r.Header)
 		}
+		// Skip body logging for SSE to avoid interfering with streaming
+		if logBody && r.URL.Path != "/sse" {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				log.Printf("Error reading body: %v", err)
+			} else {
+				log.Printf("Body: %s", string(body))
+				r.Body = io.NopCloser(bytes.NewReader(body))
+			}
+		}
 
-		// Wrap response writer to capture status code and support Hijacker
+		// Wrap response writer to capture status code
 		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(rw, r)
 
-		if config.LogRequests {
+		if logRequests {
 			log.Printf("%s %s %s - %d %v", r.RemoteAddr, r.Method, r.URL.Path, rw.statusCode, time.Since(start))
 		}
 
@@ -249,7 +276,11 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if config.EnableCORS {
+		configLock.RLock()
+		enableCORS := config.EnableCORS
+		configLock.RUnlock()
+
+		if enableCORS {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "*")
@@ -278,6 +309,11 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 
 func rateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip rate limiting for SSE
+		if r.URL.Path == "/sse" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if !rateLimiter.Allow() {
 			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 			w.Header().Set("Retry-After", "60")
@@ -324,27 +360,33 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 	currentCount := requestCounter
 	counterMutex.Unlock()
 
+	// Read config fields with lock
+	configLock.RLock()
+	maxBodySize := config.MaxBodySize
+	historySize := config.HistorySize
+	configLock.RUnlock()
+
 	// Record request for history
 	var body []byte
 	var err error
 	if r.Body != nil {
-		body, err = io.ReadAll(io.LimitReader(r.Body, config.MaxBodySize))
+		body, err = io.ReadAll(io.LimitReader(r.Body, maxBodySize))
 		if err != nil {
 			http.Error(w, "Error reading body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		r.Body = io.NopCloser(bytes.NewReader(body)) // Restore body for processing
+		r.Body = io.NopCloser(bytes.NewReader(body))
 	} else {
-		body = []byte{} // Empty body for nil case
+		body = []byte{}
 	}
-	if config.HistorySize > 0 {
+	if historySize > 0 {
 		recordRequest(r, body)
 	}
 
 	// Apply delays from headers or environment variables
 	applyDelays(r)
 
-	// Process testing features (headers and environment variables)
+	// Process testing features
 	if processTestingFeatures(w, r, body) {
 		return
 	}
@@ -372,7 +414,7 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 			size, err := strconv.Atoi(sizeHeader)
 			if err == nil && size > 0 {
 				responseBody = make([]byte, size)
-				mrand.Read(responseBody) // Use mrand
+				mrand.Read(responseBody)
 				w.Header().Set("Content-Type", "application/octet-stream")
 			}
 		} else {
@@ -405,12 +447,11 @@ func processScenario(w http.ResponseWriter, r *http.Request) bool {
 	idx, _ := scenarioIndex.LoadOrStore(r.URL.Path, 0)
 	index := idx.(int) % len(responses)
 	resp := responses[index]
-	scenarioIndex.Store(r.URL.Path, index+1) // Increment index for next request
+	scenarioIndex.Store(r.URL.Path, index+1)
 
 	// Apply delay from scenario
 	if resp.Delay != "" {
 		if strings.Contains(resp.Delay, "-") {
-			// Random delay
 			parts := strings.Split(resp.Delay, "-")
 			if len(parts) == 2 {
 				minStr := strings.TrimSuffix(parts[0], "ms")
@@ -424,7 +465,6 @@ func processScenario(w http.ResponseWriter, r *http.Request) bool {
 				}
 			}
 		} else {
-			// Fixed delay
 			delayStr := strings.TrimSuffix(resp.Delay, "ms")
 			if ms, err := strconv.Atoi(delayStr); err == nil {
 				if ms > 300000 {
@@ -436,7 +476,6 @@ func processScenario(w http.ResponseWriter, r *http.Request) bool {
 		}
 	}
 
-	// Set response headers and body
 	w.Header().Set("X-Echo-Scenario", "true")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(resp.Status)
@@ -545,10 +584,9 @@ func applyDelays(r *http.Request) {
 	// Simple delay
 	delayStr := getHeaderOrEnv(r, "X-Echo-Delay", "ECHO_DELAY")
 	if delayStr != "" {
-		// Handle "ms" suffix
 		delayStr = strings.TrimSuffix(delayStr, "ms")
 		if delayMs, err := strconv.Atoi(delayStr); err == nil && delayMs > 0 {
-			maxDelay := 300000 // 5 minutes max
+			maxDelay := 300000
 			if delayMs > maxDelay {
 				delayMs = maxDelay
 			}
@@ -617,7 +655,7 @@ func applyDelays(r *http.Request) {
 						finalDelay = 0
 					}
 					log.Printf("Exponential delay: %dms (base: %dms, attempt: %d)", finalDelay, base, attempt)
-					time.Sleep(time.Duration(finalDelay) * time.Millisecond) // Fixed: use finalDelay
+					time.Sleep(time.Duration(finalDelay) * time.Millisecond)
 					return
 				}
 			}
@@ -682,7 +720,10 @@ func echoCustomHeaders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if getHeaderOrEnv(r, "X-Echo-Server-Info", "ECHO_SERVER_INFO") == "true" {
-		w.Header().Set("X-Echo-Server", config.Hostname)
+		configLock.RLock()
+		hostname := config.Hostname
+		configLock.RUnlock()
+		w.Header().Set("X-Echo-Server", hostname)
 		w.Header().Set("X-Echo-Version", "2.0.0")
 		w.Header().Set("X-Echo-Uptime", time.Since(startTime).String())
 	}
@@ -755,9 +796,14 @@ func readyHandler(w http.ResponseWriter, r *http.Request) {
 
 // Server info handler
 func infoHandler(w http.ResponseWriter, r *http.Request) {
+	configLock.RLock()
+	maxBodySize := config.MaxBodySize
+	hostname := config.Hostname
+	configLock.RUnlock()
+
 	var body []byte
 	if r.Body != nil {
-		body, _ = io.ReadAll(io.LimitReader(r.Body, config.MaxBodySize))
+		body, _ = io.ReadAll(io.LimitReader(r.Body, maxBodySize))
 	} else {
 		body = []byte{}
 	}
@@ -777,7 +823,7 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 		"tls":          r.TLS != nil,
 		"request_id":   r.Header.Get("X-Request-ID"),
 		"server": map[string]interface{}{
-			"hostname":      config.Hostname,
+			"hostname":      hostname,
 			"version":       "2.0.0",
 			"go_version":    runtime.Version(),
 			"platform":      runtime.GOOS + "/" + runtime.GOARCH,
@@ -804,6 +850,10 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	configLock.RLock()
+	logBody := config.LogBody
+	configLock.RUnlock()
+
 	log.Printf("WebSocket connected: %s, subprotocol: %s", r.RemoteAddr, conn.Subprotocol())
 	for {
 		messageType, message, err := conn.ReadMessage()
@@ -811,7 +861,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("WebSocket read error: %v", err)
 			break
 		}
-		if config.LogBody {
+		if logBody {
 			log.Printf("%s | ws | %s", r.RemoteAddr, string(message))
 		}
 		if err := conn.WriteMessage(messageType, message); err != nil {
@@ -829,23 +879,29 @@ func sseHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	flusher, ok := w.(http.Flusher)
 	if !ok {
+		log.Printf("Streaming not supported for %s", r.RemoteAddr)
 		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
 		return
 	}
 
-	// Configurable ticker interval (default 5 seconds)
+	log.Printf("SSE connection established for %s", r.RemoteAddr)
+
 	tickerIntervalStr := getEnv("ECHO_SSE_TICKER", "5s")
 	tickerInterval, err := time.ParseDuration(tickerIntervalStr)
 	if err != nil || tickerInterval <= 0 {
+		log.Printf("Invalid ECHO_SSE_TICKER '%s', using default 5s: %v", tickerIntervalStr, err)
 		tickerInterval = 5 * time.Second
 	}
 	ticker := time.NewTicker(tickerInterval)
+	keepAlive := time.NewTicker(1 * time.Second) // Send keep-alive every second
 	defer ticker.Stop()
+	defer keepAlive.Stop()
 
 	counter := 0
 	for {
 		select {
 		case <-r.Context().Done():
+			log.Printf("SSE connection closed by client %s: %v", r.RemoteAddr, r.Context().Err())
 			return
 		case <-ticker.C:
 			counter++
@@ -854,8 +910,25 @@ func sseHandler(w http.ResponseWriter, r *http.Request) {
 				"timestamp": time.Now(),
 				"uptime":    time.Since(startTime).String(),
 			}
-			jsonData, _ := json.Marshal(data)
-			fmt.Fprintf(w, "data: %s\n\n", jsonData)
+			jsonData, err := json.Marshal(data)
+			if err != nil {
+				log.Printf("SSE JSON marshal error for %s: %v", r.RemoteAddr, err)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			_, err = fmt.Fprintf(w, "data: %s\n\n", jsonData)
+			if err != nil {
+				log.Printf("SSE write error for %s: %v", r.RemoteAddr, err)
+				return
+			}
+			log.Printf("SSE sent event %d to %s", counter, r.RemoteAddr)
+			flusher.Flush()
+		case <-keepAlive.C:
+			_, err := fmt.Fprintf(w, ": keep-alive\n\n")
+			if err != nil {
+				log.Printf("SSE keep-alive write error for %s: %v", r.RemoteAddr, err)
+				return
+			}
 			flusher.Flush()
 		}
 	}
@@ -907,7 +980,7 @@ func historyHandler(w http.ResponseWriter, r *http.Request) {
 func replayHandler(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ID     string `json:"id"`
-		Target string `json:"target"` // Optional external URL
+		Target string `json:"target"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -932,7 +1005,6 @@ func replayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Target != "" {
-		// Replay to external target
 		client := &http.Client{Timeout: 30 * time.Second}
 		httpReq, err := http.NewRequest(record.Method, req.Target, bytes.NewReader(record.Body))
 		if err != nil {
@@ -958,7 +1030,6 @@ func replayHandler(w http.ResponseWriter, r *http.Request) {
 			"headers": resp.Header,
 		})
 	} else {
-		// Echo back the stored request as response
 		contentType := record.Headers.Get("Content-Type")
 		if contentType == "" {
 			contentType = "application/octet-stream"
@@ -1001,6 +1072,10 @@ func scenarioHandler(w http.ResponseWriter, r *http.Request) {
 func recordRequest(r *http.Request, body []byte) {
 	historyMutex.Lock()
 	defer historyMutex.Unlock()
+	configLock.RLock()
+	historySize := config.HistorySize
+	configLock.RUnlock()
+
 	record := RequestRecord{
 		ID:        r.Header.Get("X-Request-ID"),
 		Timestamp: time.Now(),
@@ -1010,7 +1085,7 @@ func recordRequest(r *http.Request, body []byte) {
 		Body:      body,
 	}
 	requestHistory = append(requestHistory, record)
-	if len(requestHistory) > config.HistorySize {
+	if len(requestHistory) > historySize {
 		requestHistory = requestHistory[1:]
 	}
 }
@@ -1107,10 +1182,8 @@ func generateSelfSignedCert() {
 }
 
 func main() {
-	// Ensure HTTP/1.1 is used for WebSocket routes to avoid H2C issues
 	router := setupRoutes()
 
-	// Create a new router for WebSocket to bypass h2c
 	wsRouter := mux.NewRouter()
 	wsRouter.HandleFunc("/ws", websocketHandler)
 	wsRouter.HandleFunc("/web-ws", serveFrontendWS)
@@ -1121,7 +1194,6 @@ func main() {
 		wsRouter.Use(rateLimitMiddleware)
 	}
 
-	// Combine routers: WebSocket routes use HTTP/1.1, others use h2c
 	mixedRouter := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/ws" || r.URL.Path == "/web-ws" {
 			wsRouter.ServeHTTP(w, r)
@@ -1134,16 +1206,15 @@ func main() {
 		Addr:         ":" + config.Port,
 		Handler:      mixedRouter,
 		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		WriteTimeout: 0, // Disable WriteTimeout for SSE
+		IdleTimeout:  0, // Disable IdleTimeout for SSE
 	}
 
-	// Remove date/time from log output
 	log.SetFlags(0)
 	log.Println(`
  ⢀⣀ ⢀⣸ ⡀⢀ ⢀⣀ ⣀⡀ ⢀⣀ ⢀⡀ ⢀⣸   ⢀⡀ ⢀⣀ ⣇⡀ ⢀⡀   ⢀⣀ ⢀⡀ ⡀⣀ ⡀⢀ ⢀⡀ ⡀⣀
  ⠣⠼ ⠣⠼ ⠱⠃ ⠣⠼ ⠇⠸ ⠣⠤ ⠣⠭ ⠣⠼   ⣇⠭ ⠣⠤ ⠇⠸ ⠣⠜   ⠭⠕ ⠣⠭ ⠏  ⠱⠃ ⠣⠭ ⠏ 
-	`)
+    `)
 	log.SetFlags(log.LstdFlags)
 	log.Printf("Advanced Echo Server starting on port %s", config.Port)
 

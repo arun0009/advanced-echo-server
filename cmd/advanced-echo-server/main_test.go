@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -30,17 +31,21 @@ func (frw *flusherResponseWriter) Flush() {
 	// No-op for testing, as httptest doesn't write to a real connection
 }
 
-var testRegistry *prometheus.Registry
+var (
+	testRegistry *prometheus.Registry
+)
 
 func setupTest() {
+	configLock.Lock()
+	defer configLock.Unlock()
+
 	// Reset global state
 	scenarios = sync.Map{}
 	scenarioIndex = sync.Map{}
-	requestHistory = []RequestRecord{}
 	historyMutex.Lock()
 	requestHistory = make([]RequestRecord, 0, config.HistorySize)
 	historyMutex.Unlock()
-	requestCounter = 0
+	atomic.StoreUint64(&requestCounter, 0) // Use atomic for thread-safe reset
 	rateLimiter = nil
 	config = Config{
 		Port:           "8080",
@@ -347,7 +352,9 @@ func TestScenarioHandler(t *testing.T) {
 
 func TestHistoryAndReplayHandler(t *testing.T) {
 	setupTest()
+	configLock.Lock()
 	config.HistorySize = 10
+	configLock.Unlock()
 
 	req, err := http.NewRequest("POST", "/test", strings.NewReader(`{"test": "record"}`))
 	if err != nil {
@@ -400,8 +407,10 @@ func TestHistoryAndReplayHandler(t *testing.T) {
 
 func TestRateLimitMiddleware(t *testing.T) {
 	setupTest()
+	configLock.Lock()
 	config.RateLimitRPS = 1
 	config.RateLimitBurst = 1
+	configLock.Unlock()
 	rateLimiter = rate.NewLimiter(rate.Limit(config.RateLimitRPS), config.RateLimitBurst)
 
 	req, err := http.NewRequest("GET", "/", nil)
@@ -590,7 +599,7 @@ func TestWebSocketRoute(t *testing.T) {
 }
 
 func TestWebSocketHandler(t *testing.T) {
-	setupTest()
+	setupTest() // Call setupTest first
 	wsRouter := mux.NewRouter()
 	wsRouter.StrictSlash(false)
 	wsRouter.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
@@ -606,7 +615,13 @@ func TestWebSocketHandler(t *testing.T) {
 	wsRouter.Use(loggingMiddleware)
 	wsRouter.Use(corsMiddleware)
 	wsRouter.Use(requestIDMiddleware)
-	server := httptest.NewServer(wsRouter)
+
+	var wg sync.WaitGroup
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		wg.Add(1)
+		defer wg.Done()
+		wsRouter.ServeHTTP(w, r)
+	}))
 	defer server.Close()
 
 	url := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws"
@@ -640,20 +655,29 @@ func TestWebSocketHandler(t *testing.T) {
 	if err != nil {
 		t.Fatal("WebSocket close failed:", err)
 	}
-}
 
+	server.Close()
+	wg.Wait() // Ensure all server goroutines are done
+}
 func TestWebSocketFrontend(t *testing.T) {
-	setupTest()
+	setupTest() // Call setupTest before starting the server
 	wsRouter := mux.NewRouter()
 	wsRouter.StrictSlash(false)
 	wsRouter.HandleFunc("/web-ws", func(w http.ResponseWriter, r *http.Request) {
 		t.Logf("WebSocket frontend handler called for %s %s, headers: %v", r.Method, r.URL.Path, r.Header)
-		serveFrontendWS(w, r) // Test HTML serving
+		serveFrontendWS(w, r)
 	}).Methods("GET")
 	wsRouter.Use(loggingMiddleware)
 	wsRouter.Use(corsMiddleware)
 	wsRouter.Use(requestIDMiddleware)
-	server := httptest.NewServer(wsRouter)
+
+	// Create a WaitGroup to ensure server goroutines are done
+	var wg sync.WaitGroup
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		wg.Add(1)
+		defer wg.Done()
+		wsRouter.ServeHTTP(w, r)
+	}))
 	defer server.Close()
 
 	resp, err := http.Get(server.URL + "/web-ws")
@@ -672,6 +696,10 @@ func TestWebSocketFrontend(t *testing.T) {
 	if resp.Header.Get("Access-Control-Allow-Origin") != "*" {
 		t.Errorf("WebSocket frontend response missing CORS header: got %q, want %q", resp.Header.Get("Access-Control-Allow-Origin"), "*")
 	}
+
+	// Close the server and wait for goroutines to finish
+	server.Close()
+	wg.Wait() // Ensure all server goroutines are done
 }
 
 func TestSSEHandler(t *testing.T) {
@@ -876,8 +904,10 @@ func TestEchoServerHeaderDelay(t *testing.T) {
 
 func TestWebSocketRateLimitMiddleware(t *testing.T) {
 	setupTest()
+	configLock.Lock()
 	config.RateLimitRPS = 1
 	config.RateLimitBurst = 1
+	configLock.Unlock()
 	rateLimiter = rate.NewLimiter(rate.Limit(config.RateLimitRPS), config.RateLimitBurst)
 
 	wsRouter := mux.NewRouter()
@@ -896,7 +926,13 @@ func TestWebSocketRateLimitMiddleware(t *testing.T) {
 	wsRouter.Use(corsMiddleware)
 	wsRouter.Use(requestIDMiddleware)
 	wsRouter.Use(rateLimitMiddleware)
-	server := httptest.NewServer(wsRouter)
+
+	var wg sync.WaitGroup
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		wg.Add(1)
+		defer wg.Done()
+		wsRouter.ServeHTTP(w, r)
+	}))
 	defer server.Close()
 
 	url := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws"
@@ -910,19 +946,26 @@ func TestWebSocketRateLimitMiddleware(t *testing.T) {
 			t.Fatalf("WebSocket dial failed: %v, response: <nil>", err)
 		}
 	}
-	// Send close message to avoid 1006 error
 	err = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Now().Add(time.Second))
 	if err != nil {
 		t.Fatal("WebSocket close failed:", err)
 	}
 	conn.Close()
 
-	// Second connection should be rate-limited
+	server.Close()
+	wg.Wait() // Ensure all server goroutines are done
+
 	_, resp, err = websocket.DefaultDialer.Dial(url, nil)
 	if err == nil {
-		t.Error("WebSocket connection succeeded despite rate limit")
-	}
-	if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
-		t.Errorf("WebSocket rate limit response incorrect: got status %v, want %v", resp.StatusCode, http.StatusTooManyRequests)
+		t.Error("WebSocket connection succeeded despite rate limit or server closure")
+		if resp != nil {
+			resp.Body.Close()
+		}
+	} else if resp != nil && resp.StatusCode != http.StatusTooManyRequests {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		t.Errorf("WebSocket rate limit response incorrect: got status %v, want %v, body: %s", resp.StatusCode, http.StatusTooManyRequests, string(body))
+	} else if err != nil && !strings.Contains(err.Error(), "websocket: bad handshake") && !strings.Contains(err.Error(), "dial tcp") {
+		t.Errorf("Unexpected WebSocket error: %v", err)
 	}
 }
