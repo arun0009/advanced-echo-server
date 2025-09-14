@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
-	crand "crypto/rand"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -15,7 +16,7 @@ import (
 	"log"
 	"math"
 	"math/big"
-	"math/rand"
+	mrand "math/rand" // Alias math/rand to avoid conflict with crypto/rand
 	"net"
 	"net/http"
 	"os"
@@ -36,6 +37,9 @@ import (
 	"golang.org/x/time/rate"
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed html/*
+var files embed.FS
 
 // Config holds server configuration
 type Config struct {
@@ -78,17 +82,16 @@ type Response struct {
 	Body   string `yaml:"body" json:"body"`
 }
 
-//go:embed html/*
-var files embed.FS
-
 // Global state for metrics, counters, and scenarios
 var (
 	config    Config
 	startTime time.Time
 	upgrader  = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true },
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
-	rng            = rand.New(rand.NewSource(time.Now().UnixNano()))
+	rng            = mrand.New(mrand.NewSource(time.Now().UnixNano())) // Use mrand
 	requestCounter uint64
 	counterMutex   sync.Mutex
 	scenarios      sync.Map // map[string][]Response (path -> response sequence)
@@ -230,7 +233,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 			log.Printf("Headers: %+v", r.Header)
 		}
 
-		// Wrap response writer to capture status code
+		// Wrap response writer to capture status code and support Hijacker
 		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(rw, r)
 
@@ -285,21 +288,32 @@ func rateLimitMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// Custom response writer to capture status code and support Flusher
+// Custom response writer to capture status code and support Flusher and Hijacker
 type responseWriter struct {
 	http.ResponseWriter
 	statusCode int
+	written    bool
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
-	rw.statusCode = code
-	rw.ResponseWriter.WriteHeader(code)
+	if !rw.written {
+		rw.statusCode = code
+		rw.ResponseWriter.WriteHeader(code)
+		rw.written = true
+	}
 }
 
 func (rw *responseWriter) Flush() {
 	if flusher, ok := rw.ResponseWriter.(http.Flusher); ok {
 		flusher.Flush()
 	}
+}
+
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := rw.ResponseWriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, fmt.Errorf("response does not implement http.Hijacker")
 }
 
 // Main Echo Handler
@@ -358,7 +372,7 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 			size, err := strconv.Atoi(sizeHeader)
 			if err == nil && size > 0 {
 				responseBody = make([]byte, size)
-				rand.Read(responseBody)
+				mrand.Read(responseBody) // Use mrand
 				w.Header().Set("Content-Type", "application/octet-stream")
 			}
 		} else {
@@ -603,7 +617,7 @@ func applyDelays(r *http.Request) {
 						finalDelay = 0
 					}
 					log.Printf("Exponential delay: %dms (base: %dms, attempt: %d)", finalDelay, base, attempt)
-					time.Sleep(time.Duration(finalDelay) * time.Millisecond)
+					time.Sleep(time.Duration(finalDelay) * time.Millisecond) // Fixed: use finalDelay
 					return
 				}
 			}
@@ -776,13 +790,21 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 
 // WebSocket handler
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("WebSocket handler invoked for %s %s, headers: %v", r.Method, r.URL.Path, r.Header)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v", err)
 		return
 	}
-	defer conn.Close()
-	log.Printf("WebSocket connected: %s", r.RemoteAddr)
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Printf("WebSocket close error: %v", err)
+		} else {
+			log.Printf("WebSocket connection closed: %s", r.RemoteAddr)
+		}
+	}()
+
+	log.Printf("WebSocket connected: %s, subprotocol: %s", r.RemoteAddr, conn.Subprotocol())
 	for {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
@@ -790,14 +812,14 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if config.LogBody {
-			log.Printf("%s | ws | %s", r.RemoteAddr, message)
+			log.Printf("%s | ws | %s", r.RemoteAddr, string(message))
 		}
-		err = conn.WriteMessage(messageType, message)
-		if err != nil {
+		if err := conn.WriteMessage(messageType, message); err != nil {
 			log.Printf("WebSocket write error: %v", err)
 			break
 		}
 	}
+	log.Printf("WebSocket loop exited: %s", r.RemoteAddr)
 }
 
 // Server-Sent Events handler
@@ -841,24 +863,14 @@ func sseHandler(w http.ResponseWriter, r *http.Request) {
 
 // Frontend for WebSocket
 func serveFrontendWS(w http.ResponseWriter, r *http.Request) {
-	const templateName = "html/websocket.html"
-	tmpl, err := template.ParseFS(files, templateName)
+	data, err := files.ReadFile("html/websocket.html")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to read websocket.html: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	templateData := struct {
-		Host string
-	}{
-		Host: r.Host,
-	}
-	err = tmpl.Execute(w, templateData)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Add("Content-Type", "text/html")
-	w.WriteHeader(200)
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
 }
 
 // Frontend for SSE
@@ -879,8 +891,8 @@ func serveFrontendSSE(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Add("Content-Type", "text/html")
-	w.WriteHeader(200)
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
 }
 
 // History handler
@@ -1028,7 +1040,7 @@ func getHeaderOrEnv(r *http.Request, header, env string) string {
 
 func generateRequestID() string {
 	bytes := make([]byte, 8)
-	if _, err := crand.Read(bytes); err != nil {
+	if _, err := rand.Read(bytes); err != nil {
 		panic("failed to generate request ID: " + err.Error())
 	}
 	return hex.EncodeToString(bytes)
@@ -1056,7 +1068,7 @@ func parseFloat64(s string) float64 {
 }
 
 func generateSelfSignedCert() {
-	privateKey, err := rsa.GenerateKey(crand.Reader, 2048)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Fatalf("Failed to generate private key: %v", err)
 	}
@@ -1071,7 +1083,7 @@ func generateSelfSignedCert() {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
-	derBytes, err := x509.CreateCertificate(crand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
 	if err != nil {
 		log.Fatalf("Failed to create certificate: %v", err)
 	}
@@ -1095,14 +1107,32 @@ func generateSelfSignedCert() {
 }
 
 func main() {
+	// Ensure HTTP/1.1 is used for WebSocket routes to avoid H2C issues
 	router := setupRoutes()
 
-	// Wrap the router with h2c to support HTTP/2 over cleartext
-	handler := h2c.NewHandler(router, &http2.Server{})
+	// Create a new router for WebSocket to bypass h2c
+	wsRouter := mux.NewRouter()
+	wsRouter.HandleFunc("/ws", websocketHandler)
+	wsRouter.HandleFunc("/web-ws", serveFrontendWS)
+	wsRouter.Use(loggingMiddleware)
+	wsRouter.Use(corsMiddleware)
+	wsRouter.Use(requestIDMiddleware)
+	if rateLimiter != nil {
+		wsRouter.Use(rateLimitMiddleware)
+	}
+
+	// Combine routers: WebSocket routes use HTTP/1.1, others use h2c
+	mixedRouter := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/ws" || r.URL.Path == "/web-ws" {
+			wsRouter.ServeHTTP(w, r)
+		} else {
+			h2c.NewHandler(router, &http2.Server{}).ServeHTTP(w, r)
+		}
+	})
 
 	server := &http.Server{
 		Addr:         ":" + config.Port,
-		Handler:      handler,
+		Handler:      mixedRouter,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  120 * time.Second,
@@ -1126,7 +1156,7 @@ func main() {
 		log.Printf("Starting HTTPS server with cert: %s", config.CertFile)
 		err = server.ListenAndServeTLS(config.CertFile, config.KeyFile)
 	} else {
-		log.Printf("Starting HTTP server (with H2C support)")
+		log.Printf("Starting HTTP server (with H2C support for non-WebSocket routes)")
 		err = server.ListenAndServe()
 	}
 

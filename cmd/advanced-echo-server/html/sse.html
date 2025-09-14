@@ -1,44 +1,405 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SSE Echo Client</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
-        #log { margin-top: 20px; padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; max-height: 400px; overflow-y: scroll; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #334155 0%, #475569 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            100% { transform: translateY(-100px) rotate(360deg); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+
+        .status-section {
+            padding: 30px 40px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .status-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .status-indicator.connected::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border: 2px solid #10b981;
+            border-radius: 50%;
+            opacity: 0;
+            animation: ping 2s infinite;
+        }
+
+        @keyframes ping {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+
+        .status-text {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #475569;
+        }
+
+        .connection-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .log-section {
+            padding: 40px;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .log-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .clear-button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .clear-button:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        #log {
+            background: #1e293b;
+            color: #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            border: 1px solid #334155;
+            scroll-behavior: smooth;
+        }
+
+        #log::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #log::-webkit-scrollbar-track {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        #log::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        #log::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 3px solid transparent;
+            animation: fadeIn 0.3s ease-out;
+            word-wrap: break-word;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .log-entry.system {
+            background: rgba(59, 130, 246, 0.1);
+            border-left-color: #3b82f6;
+            color: #93c5fd;
+        }
+
+        .log-entry.server {
+            background: rgba(16, 185, 129, 0.1);
+            border-left-color: #10b981;
+            color: #6ee7b7;
+        }
+
+        .log-entry.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: #ef4444;
+            color: #fca5a5;
+        }
+
+        .timestamp {
+            opacity: 0.6;
+            font-size: 0.75rem;
+            margin-right: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #64748b;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+
+        .footer {
+            background: #f8fafc;
+            padding: 20px 40px;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.875rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .tech-badge {
+            display: inline-block;
+            background: #334155;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin: 0 4px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .status-section,
+            .log-section {
+                padding: 20px;
+            }
+            
+            .footer {
+                padding: 15px 20px;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Server-Sent Events (SSE) Client</h1>
-    <p>This client is listening for events from the server.</p>
-    <div id="log"></div>
+    <div class="container">
+        <div class="header">
+            <h1>Server-Sent Events Client</h1>
+            <p>Real-time event streaming from server</p>
+        </div>
+
+        <div class="status-section">
+            <div class="status-container">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span class="status-text" id="statusText">Connecting...</span>
+            </div>
+            <div class="connection-info" id="connectionInfo">
+                Endpoint: <span id="endpoint"></span>
+            </div>
+        </div>
+
+        <div class="log-section">
+            <div class="log-header">
+                <h2 class="log-title">Event Stream</h2>
+                <button class="clear-button" id="clearButton">Clear Log</button>
+            </div>
+            <div id="log">
+                <div class="empty-state">Waiting for events...</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Powered by <span class="tech-badge">EventSource API</span> and <span class="tech-badge">Server-Sent Events</span>
+        </div>
+    </div>
+
     <script>
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
         const logEl = document.getElementById('log');
-        const sseUrl = "http://" + window.location.host + "/sse";
+        const clearButton = document.getElementById('clearButton');
+        const endpointEl = document.getElementById('endpoint');
         
-        function logMessage(message) {
-            const entry = document.createElement('p');
-            entry.textContent = message;
+        let hasMessages = false;
+        
+        const sseUrl = "http://" + window.location.host + "/sse";
+        endpointEl.textContent = sseUrl;
+
+        function updateStatus(status, message) {
+            statusText.textContent = message;
+            statusIndicator.className = 'status-indicator ' + status;
+        }
+
+        function logMessage(message, type = 'server') {
+            if (!hasMessages) {
+                logEl.innerHTML = '';
+                hasMessages = true;
+            }
+
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="timestamp">${timestamp}</span>${message}`;
+            
             logEl.appendChild(entry);
             logEl.scrollTop = logEl.scrollHeight;
         }
+
+        clearButton.addEventListener('click', function() {
+            logEl.innerHTML = '<div class="empty-state">Log cleared. Waiting for events...</div>';
+            hasMessages = false;
+        });
 
         if (window.EventSource) {
             const source = new EventSource(sseUrl);
 
             source.onopen = function() {
-                logMessage('Connection to SSE stream established.');
+                updateStatus('connected', 'Connected');
+                logMessage('🟢 Connection to SSE stream established', 'system');
             };
 
             source.onmessage = function(event) {
-                logMessage('Received message: ' + event.data);
+                logMessage(`📨 ${event.data}`, 'server');
             };
 
             source.onerror = function(error) {
-                logMessage('Error: ' + error);
-                source.close();
+                updateStatus('error', 'Connection Error');
+                logMessage('🔴 Connection error occurred', 'error');
+                console.error('SSE Error:', error);
             };
+
+            // Handle specific event types if needed
+            source.addEventListener('custom-event', function(event) {
+                logMessage(`🎯 Custom event: ${event.data}`, 'server');
+            });
+
         } else {
-            logMessage('Your browser does not support Server-Sent Events.');
+            updateStatus('error', 'Not Supported');
+            logMessage('❌ Your browser does not support Server-Sent Events', 'error');
         }
     </script>
 </body>
