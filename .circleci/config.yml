@@ -1,49 +1,34 @@
----
 version: 2.1
 
-orbs:
-  goreleaser: hubci/goreleaser@2.5.0
-
-executors:
-  golang:
-    docker:
-      - image: cimg/go:1.25.1
-
 jobs:
-  build:
-    executor: golang
+  test-and-build:
+    docker:
+      - image: cimg/go:1.25
     steps:
       - checkout
-      - run: go mod download
-      - run: go test ./... -v -cover
-      - run: go build -o advanced-echo-server ./cmd/advanced-echo-server
+      - run:
+          name: Install Dependencies
+          command: go mod tidy
+      - run:
+          name: Run Tests (with race detector)
+          command: go test -v -race ./...
+      - run:
+          name: Static Analysis
+          command: |
+            go fmt ./...
+            go vet ./...
+      - run:
+          name: Build Binary
+          command: |
+            mkdir -p dist
+            go build -ldflags="-s -w" -o dist/advanced-echo-server ./cmd/advanced-echo-server
+      - persist_to_workspace:
+          root: dist
+          paths:
+            - .
 
 workflows:
   version: 2
-  advanced-echo-server:
+  build-and-test:
     jobs:
-      - build:
-          filters:
-            tags:
-              only: /.*/
-      - goreleaser/release:
-          name: test-release
-          version: '2.1.0'
-          go-version: '1.25.1'
-          dry-run: true
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*/
-      - goreleaser/release:
-          name: release
-          version: '2.1.0'
-          go-version: '1.25.1'
-          requires:
-            - build
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+      - test-and-build
