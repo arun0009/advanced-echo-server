@@ -9,15 +9,16 @@
 
 ## Overview
 
-Advanced Echo Server is a sophisticated testing tool that echoes back exactly what you send while providing extensive controls for simulating real-world conditions. Perfect for developers, DevOps engineers, and QA teams who need to test applications under various scenarios.
+Advanced Echo Server is a sophisticated testing tool that echoes back exactly what you send while providing extensive controls for simulating real-world conditions. Perfect for developers, DevOps engineers, and QA teams who need to test applications under various scenarios, including retry logic, circuit breakers, and distributed system failures.
 
 ### Key Benefits
 
-- **Precise Control**: Fine-tune server behavior via HTTP headers or environment variables
-- **Chaos Engineering**: Inject failures, delays, and errors to test system resilience  
+- **Precise Control**: Fine-tune server behavior via HTTP headers, environment variables, or YAML scenarios
+- **Chaos Engineering**: Inject failures, delays, rate limits, and complex failure patterns  
 - **Load Testing**: Simulate high-latency responses and various error conditions
 - **Developer Friendly**: Easy setup with Docker, comprehensive logging, and web interfaces
-- **Production Ready**: HTTP/2 support, TLS, CORS, and security features built-in
+- **Production Ready**: HTTP/2 support, TLS, CORS, Prometheus metrics, and security features built-in
+- **Request Replay**: Record and replay requests for debugging and testing
 
 ## Table of Contents
 
@@ -71,17 +72,20 @@ docker-compose up -d
 | Control Method | Usage | Priority |
 |---|---|---|
 | **HTTP Headers** | Per-request control | High |
-| **Environment Variables** | Container-wide defaults | Low |
+| **Environment Variables** | Container-wide defaults | Medium |
+| **YAML Scenarios** | Predefined response sequences | Low |
 
-*Headers always override environment variables*
+*Headers override environment variables, which override YAML scenarios*
 
 ### Testing Capabilities
-
-- **Delay Simulation**: Simple, jitter, random, and exponential delay patterns
-- **Error Injection**: HTTP status codes, timeouts, and random failures  
-- **Chaos Engineering**: Configurable failure rates and error scenarios
+- **Stateful Scenarios**: Define response sequences (e.g., [200, 500, 200]) for endpoints via YAML or API
+- **Delay Simulation**: Simple, jitter, random, exponential and custom latency injection
+- **Error Injection**: HTTP status codes, timeouts, random failures, and rate limits 
+- **Chaos Engineering**: Configurable failure rates, error scenarios, and advanced patterns
 - **Response Control**: Dynamic body size, content type, and headers
-- **Request Analytics**: Detailed request and server metadata
+- **Request Analytics**: Detailed request and server metadata via `/info`
+- **Request Recording**: Store last N requests in memory for review/replay
+- **Observability**: Prometheus metrics for requests, errors, and latency
 
 ### Infrastructure Features
 
@@ -106,17 +110,46 @@ docker-compose up -d
 | `LOG_HEADERS` | Log all headers | `false` | `LOG_HEADERS=true` |
 | `LOG_BODY` | Log request body | `false` | `LOG_BODY=true` |
 | `MAX_BODY_SIZE` | Max request body size (bytes) | `10485760` | `MAX_BODY_SIZE=1048576` |
+| `ECHO_HISTORY_SIZE` | Max requests to store in history | `100` | `ECHO_HISTORY_SIZE=50` |
+| `ECHO_SCENARIO_FILE` | Path to YAML scenario file | `scenarios.yaml` | `ECHO_SCENARIO_FILE=/config/scenarios.yaml` |
+| `ECHO_RATE_LIMIT_RPS` | Rate limit (requests/sec) | `0 (disabled)` | `ECHO_RATE_LIMIT_RPS=10` |
+| `ECHO_RATE_LIMIT_BURST` | Rate limit burst size | `0 (disabled)` | `ECHO_RATE_LIMIT_BURST=20` |
+| `ECHO_SSE_TICKER` | Interval for Server-Sent Events (SSE) in the `/sse` endpoint | `5s` | `ECHO_SSE_TICKER=500ms` |
+| `ECHO_DELAY` | Simple delay for responses (supports `ms` suffix) | `""` | `ECHO_DELAY=50ms` |
+| `ECHO_STATUS` | Force HTTP status code | `""` | `ECHO_STATUS=400` |
+| `ECHO_ERROR` | Simulate specific error | `""` | `ECHO_ERROR=timeout` |
+| `ECHO_CHAOS` | Random failure rate (%) | `""` | `ECHO_CHAOS=10` |
 
 ### Testing Controls
 
 | Feature | HTTP Header | Environment Variable | Example Values |
 |---|---|---|---|
-| **Simple Delay** | `X-Echo-Delay` | `ECHO_DELAY` | `1000` (1 second) |
+| **Simple Delay** | `X-Echo-Delay` | `ECHO_DELAY` | `1000ms` (1 second) |
 | **Random Delay** | `X-Echo-Random-Delay` | `ECHO_RANDOM_DELAY` | `100,500` (100-500ms) |
+| **Latency Injection** | `X-Echo-Latency` | `ECHO_LATENCY` | `500ms`, `100-500ms` |
 | **Force Status** | `X-Echo-Status` | `ECHO_STATUS` | `404`, `500`, `503` |
-| **Simulate Error** | `X-Echo-Error` | `ECHO_ERROR` | `500`, `timeout`, `connection_reset` |
+| **Simulate Error** | `X-Echo-Error` | `ECHO_ERROR` | `500`, `timeout`, `random` |
 | **Chaos Rate** | `X-Echo-Chaos` | `ECHO_CHAOS` | `10` (10% failure rate) |
 | **Custom Headers** | `X-Echo-Set-Header-*` | `ECHO_HEADER_*` | `ECHO_HEADER_X_Version=1.2.3` |
+
+# Scenario Configuration (YAML)
+
+Define response sequences in scenarios.yaml:
+
+```yaml
+- path: /api/test
+  responses:
+    - status: 200
+      delay: 500ms
+      body: '{"status": "ok"}'
+    - status: 500
+      delay: 1000ms
+      body: '{"error": "internal"}'
+    - status: 200
+      delay: 100-500ms
+      body: '{"status": "recovered"}'
+```
+*Note: Scenarios can also be set dynamically via the /scenario endpoint (see Usage Examples).*
 
 ## Usage Examples
 
@@ -129,18 +162,18 @@ curl -X POST http://localhost:8080 \
   -d '{"message": "Hello, World!"}'
 ```
 
-### Load Testing Scenarios
+### Scenario Testing
 
 ```bash
-# Simulate slow responses (2-second delay)
-curl -X POST http://localhost:8080 \
-  -H "X-Echo-Delay: 2000" \
-  -d '{"test": "load testing"}'
+# Define scenario via API
+curl -X POST http://localhost:8080/scenario \
+  -H "Content-Type: application/json" \
+  -d '[{"path": "/api/test", "responses": [{"status": 200, "body": "{\"ok\": true}"}, {"status": 500}]}]'
 
-# Random response times (100-500ms)
-curl -X POST http://localhost:8080 \
-  -H "X-Echo-Random-Delay: 100,500" \
-  -d '{"test": "variable latency"}'
+# Test sequence
+curl http://localhost:8080/api/test # Returns 200
+curl http://localhost:8080/api/test # Returns 500
+curl http://localhost:8080/api/test # Returns 200 (loops back)
 ```
 
 ### Chaos Engineering
@@ -151,15 +184,55 @@ curl -X POST http://localhost:8080 \
   -H "X-Echo-Chaos: 20" \
   -d '{"test": "chaos engineering"}'
 
-# Force specific error
+# Simulate rate limit
 curl -X POST http://localhost:8080 \
-  -H "X-Echo-Error: 503" \
-  -d '{"test": "service unavailable"}'
+  -H "X-Echo-Error: 429" \
+  -d '{"test": "rate limit"}'
 
-# Simulate timeout
+# Inject random latency
 curl -X POST http://localhost:8080 \
-  -H "X-Echo-Error: timeout" \
-  -d '{"test": "timeout simulation"}'
+  -H "X-Echo-Latency: 100-500ms" \
+  -d '{"test": "latency"}'
+
+# Exponential backoff (base 100ms, attempt 3)
+curl -X POST http://localhost:8080 \
+  -H "X-Echo-Exponential: 100,3" \
+  -d '{"test": "backoff"}'
+```
+
+### Request History and Replay
+
+```bash
+# Send a request to record
+curl -X POST http://localhost:8080 \
+  -d '{"test": "record"}'
+
+# View history (note the ID from response or history)
+curl http://localhost:8080/history
+
+# Replay to client (replace <id> with actual ID)
+curl -X POST http://localhost:8080/replay \
+  -H "Content-Type: application/json" \
+  -d '{"id": "<id>"}'
+
+# Replay to external target
+curl -X POST http://localhost:8080/replay \
+  -H "Content-Type: application/json" \
+  -d '{"id": "<id>", "target": "http://other-service:8080"}'
+```
+
+### Load Testing Scenarios
+
+```bash
+# Simulate slow responses (2-second delay)
+curl -X POST http://localhost:8080 \
+  -H "X-Echo-Delay: 2000ms" \
+  -d '{"test": "load testing"}'
+
+# Random response times (100-500ms)
+curl -X POST http://localhost:8080 \
+  -H "X-Echo-Random-Delay: 100,500" \
+  -d '{"test": "variable latency"}'
 ```
 
 ### Response Customization
@@ -175,6 +248,22 @@ curl -X POST http://localhost:8080 \
 curl -X POST http://localhost:8080 \
   -H "X-Echo-Status: 201" \
   -d '{"status": "created"}'
+
+# Generate large response body (1MB)
+curl -X POST http://localhost:8080 \
+  -H "X-Echo-Response-Size: 1048576" \
+  -d '{"test": "large response"}'
+  ```
+
+# Monitoring
+
+```bash
+# Access Prometheus metrics
+curl http://localhost:8080/metrics
+
+# Query request latency (example Prometheus query)
+# Average latency over the last 5 minutes
+rate(echo_request_duration_seconds_sum[5m]) / rate(echo_request_duration_seconds_count[5m])
 ```
 
 ## Web Interface
@@ -204,11 +293,13 @@ docker run -p 9090:9090 -e PORT=9090 arun0009/advanced-echo-server:latest
 # Run with TLS and custom configuration
 docker run -p 443:443 \
   -v /path/to/certs:/certs \
+  -v /path/to/scenarios.yaml:/config/scenarios.yaml \
   -e PORT=443 \
   -e ENABLE_TLS=true \
   -e CERT_FILE=/certs/server.crt \
   -e KEY_FILE=/certs/server.key \
-  -e LOG_REQUESTS=true \
+  -e ECHO_SCENARIO_FILE=/config/scenarios.yaml \
+  -e ECHO_HISTORY_SIZE=50 \
   arun0009/advanced-echo-server:latest
 ```
 
@@ -222,12 +313,18 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - ECHO_DELAY=500
+      - PORT=8080
+      - ECHO_DELAY=500ms
       - ECHO_CHAOS=5
       - LOG_REQUESTS=true
-      - LOG_HEADERS=false
+      - ECHO_RATE_LIMIT_RPS=10
+      - ECHO_RATE_LIMIT_BURST=20
+      - ECHO_HISTORY_SIZE=50
+      - ECHO_SSE_TICKER=500ms
+      - ECHO_SCENARIO_FILE=/config/scenarios.yaml
     volumes:
       - ./certs:/certs
+      - ./scenarios.yaml:/config/scenarios.yaml
 ```
 
 ## API Reference
@@ -238,9 +335,15 @@ services:
 |---|---|---|
 | `ANY` | `/` | Main echo endpoint - accepts any HTTP method |
 | `GET` | `/health` | Health check endpoint |
+| `GET` | `/ready` | Readiness check endpoint|
 | `GET` | `/info` | Server information and configuration |
 | `GET` | `/web-ws` | WebSocket testing interface |
 | `GET` | `/web-sse` | Server-Sent Events testing interface |
+| `GET` | `/history` | View recorded requests |
+| `POST` | `/replay` | Replay a stored request |
+| `GET, POST` | `/scenario` | Manage response scenarios |
+| `GET` | `/metrics`| Prometheus metrics |
+
 
 ## Contributing
 
@@ -264,6 +367,11 @@ go mod download
 
 # Run tests
 go test ./...
+
+# Check test coverage
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out -o coverage.html
+
 
 # Run with live reload (requires air)
 air

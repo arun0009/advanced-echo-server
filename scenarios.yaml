@@ -1,0 +1,11 @@
+- path: /api/test
+  responses:
+    - status: 200
+      delay: 500ms
+      body: '{"status": "ok"}'
+    - status: 500
+      delay: 1000ms
+      body: '{"error": "internal"}'
+    - status: 200
+      delay: 100-500ms
+      body: '{"status": "recovered"}'
