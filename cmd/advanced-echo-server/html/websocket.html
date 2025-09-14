@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Echo Client</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        #messageInput { width: calc(100% - 100px); padding: 8px; border: 1px solid #ccc; }
+        #sendButton { width: 90px; padding: 8px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        #log { margin-top: 20px; padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; max-height: 400px; overflow-y: scroll; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Echo Client</h1>
+    <p>Status: <span id="status">Connecting...</span></p>
+    <div>
+        <input type="text" id="messageInput" placeholder="Enter message to echo">
+        <button id="sendButton">Send</button>
+    </div>
+    <div id="log"></div>
+    <script>
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+
+        const wsUrl = "ws://" + window.location.host + "/ws";
+        let ws;
+
+        function connect() {
+            ws = new WebSocket(wsUrl);
+            ws.onopen = function() {
+                statusEl.textContent = "Connected";
+                statusEl.style.color = "green";
+                logMessage('Connection established', 'system');
+            };
+            ws.onmessage = function(event) {
+                logMessage('Received: ' + event.data, 'server');
+            };
+            ws.onclose = function() {
+                statusEl.textContent = "Disconnected";
+                statusEl.style.color = "red";
+                logMessage('Connection closed. Reconnecting...', 'system');
+                setTimeout(connect, 3000);
+            };
+            ws.onerror = function(error) {
+                logMessage('Error: ' + error.message, 'error');
+            };
+        }
+
+        function logMessage(message, type) {
+            const entry = document.createElement('p');
+            entry.textContent = message;
+            entry.className = type;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        sendButton.onclick = function() {
+            const message = messageInput.value;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(message);
+                logMessage('Sent: ' + message, 'client');
+                messageInput.value = '';
+            }
+        };
+
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+
+        connect();
+    </script>
+</body>
+</html>

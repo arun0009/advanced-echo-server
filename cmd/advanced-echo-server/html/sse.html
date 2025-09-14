@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSE Echo Client</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        #log { margin-top: 20px; padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; max-height: 400px; overflow-y: scroll; }
+    </style>
+</head>
+<body>
+    <h1>Server-Sent Events (SSE) Client</h1>
+    <p>This client is listening for events from the server.</p>
+    <div id="log"></div>
+    <script>
+        const logEl = document.getElementById('log');
+        const sseUrl = "http://" + window.location.host + "/sse";
+        
+        function logMessage(message) {
+            const entry = document.createElement('p');
+            entry.textContent = message;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        if (window.EventSource) {
+            const source = new EventSource(sseUrl);
+
+            source.onopen = function() {
+                logMessage('Connection to SSE stream established.');
+            };
+
+            source.onmessage = function(event) {
+                logMessage('Received message: ' + event.data);
+            };
+
+            source.onerror = function(error) {
+                logMessage('Error: ' + error);
+                source.close();
+            };
+        } else {
+            logMessage('Your browser does not support Server-Sent Events.');
+        }
+    </script>
+</body>
+</html>

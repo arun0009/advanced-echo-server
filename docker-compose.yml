@@ -1,0 +1,11 @@
+services:
+  echo-server:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # Use environment variables to set global behaviors
+      - LOG_REQUESTS=true
+      - ECHO_DELAY=1000       # Apply a 1-second delay to all requests
+      - ECHO_CHAOS=5          # 5% chance of a random failure for all requests
+      - ECHO_HEADER_X_Version=1.2.3 # Add a custom header to all responses
