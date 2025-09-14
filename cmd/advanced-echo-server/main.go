@@ -399,7 +399,7 @@ func echoCustomHeaders(w http.ResponseWriter, r *http.Request) {
 
 	if getHeaderOrEnv(r, "X-Echo-Server-Info", "ECHO_SERVER_INFO") == "true" {
 		w.Header().Set("X-Echo-Server", config.Hostname)
-		w.Header().Set("X-Echo-Version", "2.0.0")
+		w.Header().Set("X-Echo-Version", "1.0.0")
 		w.Header().Set("X-Echo-Uptime", time.Since(startTime).String())
 	}
 }
