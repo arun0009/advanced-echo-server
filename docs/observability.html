@@ -37,17 +37,16 @@
   <!-- Navigation -->
   <nav class="bg-white border-b shadow-sm">
     <div class="section flex flex-wrap justify-center py-4">
-      <a href="index.html" class="nav-link">🏠 Home</a>
-      <a href="simple-echo.html" class="nav-link">Simple Echo</a>
-      <a href="delays.html" class="nav-link">Delays</a>
-      <a href="back-pressure.html" class="nav-link">Back Pressure</a>
-      <a href="scenarios.html" class="nav-link">Scenarios</a>
-      <a href="custom-responses.html" class="nav-link">Custom Responses</a>
-      <a href="websockets.html" class="nav-link">WebSockets</a>
-      <a href="sse.html" class="nav-link">SSE</a>
-      <a href="history-replay.html" class="nav-link">History & Replay</a>
-      <a href="observability.html" class="nav-link active">Observability</a>
-      <a href="security.html" class="nav-link">Security</a>
+      <a href="/advanced-echo-server/index.html" class="nav-link">🏠 Home</a>
+      <a href="/advanced-echo-server/simple-echo.html" class="nav-link">Simple Echo</a>
+      <a href="/advanced-echo-server/delays.html" class="nav-link">Delays</a>
+      <a href="/advanced-echo-server/back-pressure.html" class="nav-link">Back Pressure</a>
+      <a href="/advanced-echo-server/scenarios.html" class="nav-link">Scenarios</a>
+      <a href="/advanced-echo-server/custom-responses.html" class="nav-link">Custom Responses</a>
+      <a href="/advanced-echo-server/websockets.html" class="nav-link">WebSockets</a>
+      <a href="/advanced-echo-server/sse.html" class="nav-link">SSE</a>
+      <a href="/advanced-echo-server/history-replay.html" class="nav-link">History & Replay</a>
+      <a href="/advanced-echo-server/observability.html" class="nav-link active">Observability</a>
       <a href="api-reference.html" class="nav-link">API Reference</a>
     </div>
   </nav>
@@ -62,31 +61,31 @@
     <section class="mb-8">
       <h3 class="text-xl font-semibold mb-4">Monitoring Architecture</h3>
       <div class="feature-card">
-        <pre class="mermaid">
-graph TD
-    A[HTTP Requests] --> B[Request Middleware]
-    B --> C[Metrics Collection]
-    C --> D[Request Processing]
-    D --> E[Response Middleware]
-    E --> F[Metrics Update]
-    
-    G[Prometheus] --> H[/metrics Endpoint]
-    H --> I[Scrape Metrics]
-    
-    J[Logs] --> K[Structured Logging]
-    K --> L[Log Aggregation]
-    
-    M[Health Checks] --> N[/health Endpoint]
-    N --> O[System Status]
-    
-    P[Performance] --> Q[/debug/pprof]
-    Q --> R[Profile Analysis]
-    
-    style C fill:#e1f5fe
-    style F fill:#e8f5e8
-    style K fill:#fff3e0
-    style O fill:#f3e5f5
-</pre>
+        <div class="mermaid">
+            graph TD
+            A[HTTP Requests] --> B[Request Middleware]
+            B --> C[Metrics Collection]
+            C --> D[Request Processing]
+            D --> E[Response Middleware]
+            E --> F[Metrics Update]
+            
+            G[Prometheus] --> H[/metrics Endpoint]
+            H --> I[Scrape Metrics]
+            
+            J[Logs] --> K[Structured Logging]
+            K --> L[Log Aggregation]
+            
+            M[Health Checks] --> N[/health Endpoint]
+            N --> O[System Status]
+            
+            P[Performance] --> Q[/debug/pprof]
+            Q --> R[Profile Analysis]
+            
+            style C fill:#e1f5fe
+            style F fill:#e8f5e8
+            style K fill:#fff3e0
+            style O fill:#f3e5f5
+        </div>
       </div>
     </section>
 
