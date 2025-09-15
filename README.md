@@ -1,4 +1,8 @@
-# Advanced Echo Server
+<h1 align="center">Advanced Echo Server</h1>
+
+<p align="center">
+  <img src="docs/aes.png" alt="Advanced Echo Server Mascot" width="140" />
+</p>
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/arun0009/advanced-echo-server)](https://goreportcard.com/report/github.com/arun0009/advanced-echo-server)
 [![Docker Pulls](https://img.shields.io/docker/pulls/arun0009/advanced-echo-server)](https://hub.docker.com/r/arun0009/advanced-echo-server)
@@ -24,15 +28,15 @@ With support for YAML-defined response sequences, request recording and replay, 
 
 ## Table of Contents
 
-- [Quick Start](#-quick-start)
-- [Features](#-features)
-- [Configuration](#-configuration)
-- [Usage Examples](#-usage-examples)
-- [Web Interface](#-web-interface)
-- [Docker Usage](#-docker-usage)
-- [API Reference](#-api-reference)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Configuration](#configuration)
+- [Usage Examples](#usage-examples)
+- [Web Interface](#web-interface)
+- [Docker Usage](#docker-usage)
+- [API Reference](#api-reference)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Quick Start
 
