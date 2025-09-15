@@ -1,87 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Stream real-time events to clients using Server-Sent Events (SSE)." />
   <title>SSE - Advanced Echo Server</title>
-  <link rel="icon" type="image/x-icon" href="/advanced-echo-server/favicon.ico">
+  <link rel="icon" type="image/x-icon" href="/advanced-echo-server/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ["Inter","ui-sans-serif","system-ui","-apple-system","Segoe UI","Roboto","Helvetica Neue","Arial","Noto Sans","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"] } } }
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-  <style>
-    body { font-family: 'Inter', sans-serif; }
-    .header-img { max-width: 200px; }
-    .section { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
-    pre { background: #f4f4f4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
-    .mermaid { text-align: center; }
-  </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col">
   <!-- Header -->
-  <header class="bg-blue-600 text-white text-center py-6">
-    <img src="/advanced-echo-server/aes.png" alt="Advanced Echo Server" class="header-img mx-auto mb-4">
-    <h1 class="text-4xl font-bold mt-4">Server-Sent Events (SSE)</h1>
-    <p class="text-lg mt-2">Stream real-time events to clients</p>
+  <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
+      <img src="/advanced-echo-server/aes.png" alt="Advanced Echo Server Logo" class="w-10 h-10 rounded" />
+      <div>
+        <h1 class="text-xl font-semibold text-gray-900">Advanced Echo Server</h1>
+        <p class="text-sm text-gray-600">Go-powered testing, load simulation & chaos engineering</p>
+      </div>
+    </div>
+    <!-- Navigation -->
+    <nav class="bg-gray-800 text-gray-200 text-sm shadow-sm" role="navigation" aria-label="Primary">
+      <div class="max-w-6xl mx-auto px-4 flex flex-wrap justify-center gap-x-4 gap-y-2 py-2">
+        <a href="/advanced-echo-server/index.html" class="hover:text-white">Home</a>
+        <a href="/advanced-echo-server/simple-echo.html" class="hover:text-white">Simple Echo</a>
+        <a href="/advanced-echo-server/delays.html" class="hover:text-white">Delays</a>
+        <a href="/advanced-echo-server/back-pressure.html" class="hover:text-white">Back Pressure</a>
+        <a href="/advanced-echo-server/scenarios.html" class="hover:text-white">Scenarios</a>
+        <a href="/advanced-echo-server/custom-responses.html" class="hover:text-white">Custom Responses</a>
+        <a href="/advanced-echo-server/websockets.html" class="hover:text-white">WebSockets</a>
+        <a href="/advanced-echo-server/sse.html" aria-current="page" class="text-white font-medium">SSE</a>
+        <a href="/advanced-echo-server/history-replay.html" class="hover:text-white">History & Replay</a>
+        <a href="/advanced-echo-server/observability.html" class="hover:text-white">Observability</a>
+        <a href="/advanced-echo-server/api-reference.html" class="hover:text-white">API Reference</a>
+      </div>
+    </nav>
   </header>
 
-  <!-- Navigation -->
-  <nav class="bg-gray-800 text-white sticky top-0 shadow-md">
-    <div class="section flex flex-wrap justify-center space-x-4 py-4">
-      <a href="/advanced-echo-server/index.html" class="hover:text-blue-300">Home</a>
-      <a href="/advanced-echo-server/simple-echo.html" class="hover:text-blue-300">Simple Echo</a>
-      <a href="/advanced-echo-server/delays.html" class="hover:text-blue-300">Delays</a>
-      <a href="/advanced-echo-server/back-pressure.html" class="hover:text-blue-300">Back Pressure</a>
-      <a href="/advanced-echo-server/scenarios.html" class="hover:text-blue-300">Scenarios</a>
-      <a href="/advanced-echo-server/custom-responses.html" class="hover:text-blue-300">Custom Responses</a>
-      <a href="/advanced-echo-server/websockets.html" class="hover:text-blue-300">WebSockets</a>
-      <a href="/advanced-echo-server/sse.html" class="font-bold hover:text-blue-300">SSE</a>
-      <a href="/advanced-echo-server/history-replay.html" class="hover:text-blue-300">History & Replay</a>
-      <a href="/advanced-echo-server/observability.html" class="hover:text-blue-300">Observability</a>
-      <a href="/advanced-echo-server/api-reference.html" class="hover:text-blue-300">API Reference</a>
-    </div>
-  </nav>
-
   <!-- Main Content -->
-  <main class="section">
-    <h2 class="text-2xl font-bold mb-4">Server-Sent Events (SSE)</h2>
-    <p>Stream JSON events to clients using Server-Sent Events (SSE) at <code>/sse</code>. A web-based tester is available at <code>/web-sse</code>. Events include a counter and timestamp, sent at intervals set by <code>ECHO_SSE_TICKER</code>.</p>
+  <main class="flex-1 max-w-4xl mx-auto px-4 py-8">
+    <h2 class="text-lg font-semibold mb-3">Server-Sent Events (SSE)</h2>
+    <p class="text-sm text-gray-700 mb-4">Stream JSON events to clients using Server-Sent Events (SSE) at <code class="bg-gray-100 px-1 rounded">/sse</code>. A web-based tester is available at <code class="bg-gray-100 px-1 rounded">/web-sse</code>. Events include a counter and timestamp, sent at intervals set by <code class="bg-gray-100 px-1 rounded">ECHO_SSE_TICKER</code>.</p>
 
-    <h3 class="text-xl font-semibold mt-4">How It Works</h3>
-    <pre class="mermaid">
-      graph TD
-        A[Client Connects] --> B[Set Event Stream]
-        B --> C{Send Events}
-        C -->|Ticker| D[Send JSON Event]
-        C -->|Keep-Alive| E[Send Comment]
-        C -->|Client Disconnect| F[Close Stream]
-        D --> C
-        E --> C
-    </pre>
+    <h3 class="text-base font-medium mb-2">How It Works</h3>
+    <pre class="bg-white p-3 rounded-md text-sm overflow-x-auto mb-4 ring-1 ring-gray-200"><code class="mermaid">graph TD
+  A[Client Connects] --> B[Set Event Stream]
+  B --> C{Send Events}
+  C -->|Ticker| D[Send JSON Event]
+  C -->|Keep-Alive| E[Send Comment]
+  C -->|Client Disconnect| F[Close Stream]
+  D --> C
+  E --> C</code></pre>
 
-    <h3 class="text-xl font-semibold mt-4">SSE Endpoint</h3>
-    <p>Connect to <code>/sse</code> to receive JSON events (<code>{"counter": N, "timestamp": "..."}</code>).</p>
-    <ul class="list-disc ml-6">
-      <li><strong>Endpoint</strong>: <code>GET /sse</code></li>
-      <li><strong>Env</strong>: <code>ECHO_SSE_TICKER=5s</code> (default: 5s)</li>
+    <h3 class="text-base font-medium mb-2">SSE Endpoint</h3>
+    <p class="text-sm text-gray-700">Connect to <code class="bg-gray-100 px-1 rounded">/sse</code> to receive JSON events.</p>
+    <ul class="list-disc ml-6 text-sm">
+      <li><strong>Endpoint</strong>: <code class="bg-gray-100 px-1 rounded">GET /sse</code></li>
+      <li><strong>Env</strong>: <code class="bg-gray-100 px-1 rounded">ECHO_SSE_TICKER=5s</code> (default: 5s)</li>
       <li><strong>Example</strong>:</li>
     </ul>
-    <pre>
-      <code>
-curl -N http://localhost:8080/sse
+    <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -N http://localhost:8080/sse
 # Response (stream):
 # data: {"counter": 1, "timestamp": "2025-09-14T20:07:00Z"}
-# data: {"counter": 2, "timestamp": "2025-09-14T20:07:05Z"}
-      </code>
-    </pre>
+# data: {"counter": 2, "timestamp": "2025-09-14T20:07:05Z"}</code></pre>
 
-    <h3 class="text-xl font-semibold mt-4">SSE Tester</h3>
-    <p>Access a browser-based tester at <code>/web-sse</code> to view streaming events.</p>
-    <ul class="list-disc ml-6">
-      <li><strong>URL</strong>: <code>http://localhost:8080/web-sse</code></li>
+    <h3 class="text-base font-medium mb-2 mt-4">SSE Tester</h3>
+    <p class="text-sm text-gray-700">Access a browser-based tester at <code class="bg-gray-100 px-1 rounded">/web-sse</code> to view streaming events.</p>
+    <ul class="list-disc ml-6 text-sm">
+      <li><strong>URL</strong>: <code class="bg-gray-100 px-1 rounded">http://localhost:8080/web-sse</code></li>
       <li><strong>Features</strong>: Display events, monitor connection status.</li>
     </ul>
 
-    <h3 class="text-xl font-semibold mt-4">Notes</h3>
-    <ul class="list-disc ml-6">
+    <h3 class="text-base font-medium mb-2 mt-4">Notes</h3>
+    <ul class="list-disc ml-6 text-sm">
       <li>Keep-alive comments sent every 1s to maintain connection.</li>
       <li>No rate limiting applied to SSE.</li>
       <li>Context cancellation closes stream on client disconnect.</li>
@@ -90,19 +89,13 @@ curl -N http://localhost:8080/sse
   </main>
 
   <!-- Footer -->
-  <footer class="bg-gray-800 text-white text-center py-6">
-    <p>Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300">MIT</a></p>
+  <footer class="bg-gray-100 text-gray-600 text-center py-4 text-sm border-t border-gray-200">
+    <p>
+      Advanced Echo Server •
+      <a href="https://opensource.org/licenses/MIT" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">MIT License</a>
+    </p>
   </footer>
 
-  <!-- Initialize Mermaid -->
-  <script>
-    mermaid.initialize({ startOnLoad: true });
-    document.querySelectorAll('nav a').forEach(anchor => {
-      anchor.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.location.href = anchor.getAttribute('href');
-      });
-    });
-  </script>
+  <script>mermaid.initialize({ startOnLoad: true });</script>
 </body>
 </html>

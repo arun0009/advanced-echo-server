@@ -1,151 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Tailor response status, size, headers, and more." />
   <title>Custom Responses - Advanced Echo Server</title>
-  <link rel="icon" type="image/x-icon" href="/advanced-echo-server/favicon.ico">
+  <link rel="icon" type="image/x-icon" href="/advanced-echo-server/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ["Inter","ui-sans-serif","system-ui","-apple-system","Segoe UI","Roboto","Helvetica Neue","Arial","Noto Sans","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"] } } }
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-  <style>
-    body { font-family: 'Inter', sans-serif; }
-    .header-img { max-width: 200px; }
-    .section { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
-    pre { background: #f4f4f4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
-    .mermaid { text-align: center; }
-  </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col">
   <!-- Header -->
-  <header class="bg-blue-600 text-white text-center py-6">
-    <img src="/advanced-echo-server/aes.png" alt="Advanced Echo Server" class="header-img mx-auto mb-4">
-    <h1 class="text-4xl font-bold mt-4">Custom Responses</h1>
-    <p class="text-lg mt-2">Tailor response status, size, headers, and more</p>
+  <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
+      <img src="/advanced-echo-server/aes.png" alt="Advanced Echo Server Logo" class="w-10 h-10 rounded" />
+      <div>
+        <h1 class="text-xl font-semibold text-gray-900">Advanced Echo Server</h1>
+        <p class="text-sm text-gray-600">Go-powered testing, load simulation & chaos engineering</p>
+      </div>
+    </div>
+    <!-- Navigation -->
+    <nav class="bg-gray-800 text-gray-200 text-sm shadow-sm" role="navigation" aria-label="Primary">
+      <div class="max-w-6xl mx-auto px-4 flex flex-wrap justify-center gap-x-4 gap-y-2 py-2">
+        <a href="/advanced-echo-server/index.html" class="hover:text-white">Home</a>
+        <a href="/advanced-echo-server/simple-echo.html" class="hover:text-white">Simple Echo</a>
+        <a href="/advanced-echo-server/delays.html" class="hover:text-white">Delays</a>
+        <a href="/advanced-echo-server/back-pressure.html" class="hover:text-white">Back Pressure</a>
+        <a href="/advanced-echo-server/scenarios.html" class="hover:text-white">Scenarios</a>
+        <a href="/advanced-echo-server/custom-responses.html" aria-current="page" class="text-white font-medium">Custom Responses</a>
+        <a href="/advanced-echo-server/websockets.html" class="hover:text-white">WebSockets</a>
+        <a href="/advanced-echo-server/sse.html" class="hover:text-white">SSE</a>
+        <a href="/advanced-echo-server/history-replay.html" class="hover:text-white">History & Replay</a>
+        <a href="/advanced-echo-server/observability.html" class="hover:text-white">Observability</a>
+        <a href="/advanced-echo-server/api-reference.html" class="hover:text-white">API Reference</a>
+      </div>
+    </nav>
   </header>
 
-  <!-- Navigation -->
-  <nav class="bg-gray-800 text-white sticky top-0 shadow-md">
-    <div class="section flex flex-wrap justify-center space-x-4 py-4">
-      <a href="/advanced-echo-server/index.html" class="hover:text-blue-300">Home</a>
-      <a href="/advanced-echo-server/simple-echo.html" class="hover:text-blue-300">Simple Echo</a>
-      <a href="/advanced-echo-server/delays.html" class="hover:text-blue-300">Delays</a>
-      <a href="/advanced-echo-server/back-pressure.html" class="hover:text-blue-300">Back Pressure</a>
-      <a href="/advanced-echo-server/scenarios.html" class="hover:text-blue-300">Scenarios</a>
-      <a href="/advanced-echo-server/custom-responses.html" class="font-bold hover:text-blue-300">Custom Responses</a>
-      <a href="/advanced-echo-server/websockets.html" class="hover:text-blue-300">WebSockets</a>
-      <a href="/advanced-echo-server/sse.html" class="hover:text-blue-300">SSE</a>
-      <a href="/advanced-echo-server/history-replay.html" class="hover:text-blue-300">History & Replay</a>
-      <a href="/advanced-echo-server/observability.html" class="hover:text-blue-300">Observability</a>
-      <a href="/advanced-echo-server/api-reference.html" class="hover:text-blue-300">API Reference</a>
-    </div>
-  </nav>
-
   <!-- Main Content -->
-  <main class="section">
-    <h2 class="text-2xl font-bold mb-4">Custom Responses</h2>
-    <p>Customize HTTP responses with status codes, response sizes, compression, content types, and headers using HTTP headers or environment variables.</p>
+  <main class="flex-1 max-w-4xl mx-auto px-4 py-8">
+    <h2 class="text-lg font-semibold mb-3">Custom Responses</h2>
+    <p class="text-sm text-gray-700 mb-4">Customize HTTP responses with status codes, response sizes, compression, content types, and headers using HTTP headers or environment variables.</p>
 
-    <h3 class="text-xl font-semibold mt-4">How It Works</h3>
-    <pre class="mermaid">
-      graph TD
-        A[Receive Request] --> B{Check Headers/Env}
-        B --> C[Set Status Code]
-        B --> D[Set Response Size]
-        B --> E[Apply Compression]
-        B --> F[Set Content-Type]
-        B --> G[Add Custom Headers]
-        B --> H[Include Server Info]
-        C --> I[Generate Response]
-        D --> I
-        E --> I
-        F --> I
-        G --> I
-        H --> I
-        I --> J[Respond]
-    </pre>
+    <h3 class="text-base font-medium mb-2">How It Works</h3>
+    <pre class="bg-white p-3 rounded-md text-sm overflow-x-auto mb-4 ring-1 ring-gray-200"><code class="mermaid">graph TD
+  A[Receive Request] --> B{Check Headers/Env}
+  B --> C[Set Status Code]
+  B --> D[Set Response Size]
+  B --> E[Apply Compression]
+  B --> F[Set Content-Type]
+  B --> G[Add Custom Headers]
+  B --> H[Include Server Info]
+  C --> I[Generate Response]
+  D --> I
+  E --> I
+  F --> I
+  G --> I
+  H --> I
+  I --> J[Respond]</code></pre>
 
-    <h3 class="text-xl font-semibold mt-4">Custom Status Code</h3>
-    <p>Override the default 200 status code.</p>
-    <ul class="list-disc ml-6">
-      <li><strong>Header</strong>: <code>X-Echo-Status: 201</code></li>
+    <h3 class="text-base font-medium mb-2">Custom Status Code</h3>
+    <p class="text-sm text-gray-700">Override the default 200 status code.</p>
+    <ul class="list-disc ml-6 text-sm">
+      <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Status: 201</code></li>
       <li><strong>Example</strong>:</li>
     </ul>
-    <pre>
-      <code>
-curl -H "X-Echo-Status: 201" http://localhost:8080/
-# Response: HTTP 201 Created
-      </code>
-    </pre>
+    <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Status: 201" http://localhost:8080/
+# Response: HTTP 201 Created</code></pre>
 
-    <h3 class="text-xl font-semibold mt-4">Response Size</h3>
-    <p>Generate a response of specific size (bytes) with random data.</p>
-    <ul class="list-disc ml-6">
-      <li><strong>Header</strong>: <code>X-Echo-Response-Size: 1024</code></li>
-      <li><strong>Env</strong>: <code>ECHO_RESPONSE_SIZE=512</code></li>
+    <h3 class="text-base font-medium mb-2 mt-4">Response Size</h3>
+    <p class="text-sm text-gray-700">Generate a response of specific size (bytes) with random data.</p>
+    <ul class="list-disc ml-6 text-sm">
+      <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Response-Size: 1024</code></li>
+      <li><strong>Env</strong>: <code class="bg-gray-100 px-1 rounded">ECHO_RESPONSE_SIZE=512</code></li>
       <li><strong>Example</strong>:</li>
     </ul>
-    <pre>
-      <code>
-curl -H "X-Echo-Response-Size: 1024" http://localhost:8080/
-# Response: 1KB of random data
-      </code>
-    </pre>
+    <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Response-Size: 1024" http://localhost:8080/
+# Response: 1KB of random data</code></pre>
 
-    <h3 class="text-xl font-semibold mt-4">Compression</h3>
-    <p>Enable GZIP compression for responses.</p>
-    <ul class="list-disc ml-6">
-      <li><strong>Header</strong>: <code>X-Echo-Compress: gzip</code></li>
+    <h3 class="text-base font-medium mb-2 mt-4">Compression</h3>
+    <p class="text-sm text-gray-700">Enable GZIP compression for responses.</p>
+    <ul class="list-disc ml-6 text-sm">
+      <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Compress: gzip</code></li>
       <li><strong>Example</strong>:</li>
     </ul>
-    <pre>
-      <code>
-curl -H "X-Echo-Compress: gzip" --compressed http://localhost:8080/
-# Response: GZIP-compressed body
-      </code>
-    </pre>
+    <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Compress: gzip" --compressed http://localhost:8080/
+# Response: GZIP-compressed body</code></pre>
 
-    <h3 class="text-xl font-semibold mt-4">Content-Type</h3>
-    <p>Override the response Content-Type.</p>
-    <ul class="list-disc ml-6">
-      <li><strong>Header</strong>: <code>X-Echo-Content-Type: application/xml</code></li>
+    <h3 class="text-base font-medium mb-2 mt-4">Content-Type</h3>
+    <p class="text-sm text-gray-700">Override the response Content-Type.</p>
+    <ul class="list-disc ml-6 text-sm">
+      <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Content-Type: application/xml</code></li>
       <li><strong>Example</strong>:</li>
     </ul>
-    <pre>
-      <code>
-curl -H "X-Echo-Content-Type: application/xml" http://localhost:8080/
-# Response: Content-Type: application/xml
-      </code>
-    </pre>
+    <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Content-Type: application/xml" http://localhost:8080/
+# Response: Content-Type: application/xml</code></pre>
 
-    <h3 class="text-xl font-semibold mt-4">Custom Headers</h3>
-    <p>Add or echo custom headers in responses.</p>
-    <ul class="list-disc ml-6">
-      <li><strong>Headers</strong>: <code>X-Echo-Headers: header1,header2</code>, <code>X-Echo-Set-Header-Foo: bar</code></li>
-      <li><strong>Env</strong>: <code>ECHO_HEADER_Foo=bar</code></li>
+    <h3 class="text-base font-medium mb-2 mt-4">Custom Headers</h3>
+    <p class="text-sm text-gray-700">Add or echo custom headers in responses.</p>
+    <ul class="list-disc ml-6 text-sm">
+      <li><strong>Headers</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Headers: header1,header2</code>, <code class="bg-gray-100 px-1 rounded">X-Echo-Set-Header-Foo: bar</code></li>
+      <li><strong>Env</strong>: <code class="bg-gray-100 px-1 rounded">ECHO_HEADER_Foo=bar</code></li>
       <li><strong>Example</strong>:</li>
     </ul>
-    <pre>
-      <code>
-curl -H "X-Echo-Set-Header-Custom: value" http://localhost:8080/
-# Response Headers: Custom: value
-      </code>
-    </pre>
+    <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Set-Header-Custom: value" http://localhost:8080/
+# Response Headers: Custom: value</code></pre>
 
-    <h3 class="text-xl font-semibold mt-4">Server Info</h3>
-    <p>Include server details (uptime, hostname, version).</p>
-    <ul class="list-disc ml-6">
-      <li><strong>Header</strong>: <code>X-Echo-Server-Info: true</code></li>
+    <h3 class="text-base font-medium mb-2 mt-4">Server Info</h3>
+    <p class="text-sm text-gray-700">Include server details (uptime, hostname, version).</p>
+    <ul class="list-disc ml-6 text-sm">
+      <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Server-Info: true</code></li>
       <li><strong>Example</strong>:</li>
     </ul>
-    <pre>
-      <code>
-curl -H "X-Echo-Server-Info: true" http://localhost:8080/
-# Response: {"uptime": "1h2m3s", "hostname": "...", "version": "1.0"}
-      </code>
-    </pre>
+    <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Server-Info: true" http://localhost:8080/
+# Response: {"uptime": "1h2m3s", "hostname": "...", "version": "1.0"}</code></pre>
 
-    <h3 class="text-xl font-semibold mt-4">Notes</h3>
-    <ul class="list-disc ml-6">
+    <h3 class="text-base font-medium mb-2 mt-4">Notes</h3>
+    <ul class="list-disc ml-6 text-sm">
       <li>Headers override environment variables.</li>
       <li>Response size and compression work together (e.g., large GZIP data).</li>
       <li>Invalid headers (e.g., malformed status) result in HTTP 400.</li>
@@ -153,19 +132,13 @@ curl -H "X-Echo-Server-Info: true" http://localhost:8080/
   </main>
 
   <!-- Footer -->
-  <footer class="bg-gray-800 text-white text-center py-6">
-    <p>Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300">MIT</a></p>
+  <footer class="bg-gray-100 text-gray-600 text-center py-4 text-sm border-t border-gray-200">
+    <p>
+      Advanced Echo Server •
+      <a href="https://opensource.org/licenses/MIT" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">MIT License</a>
+    </p>
   </footer>
 
-  <!-- Initialize Mermaid -->
-  <script>
-    mermaid.initialize({ startOnLoad: true });
-    document.querySelectorAll('nav a').forEach(anchor => {
-      anchor.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.location.href = anchor.getAttribute('href');
-      });
-    });
-  </script>
+  <script>mermaid.initialize({ startOnLoad: true });</script>
 </body>
 </html>

@@ -34,3 +34,4 @@ go.work.sum
 .idea/
 .DS-Store
 advanced-echo-server
+.zencoder
