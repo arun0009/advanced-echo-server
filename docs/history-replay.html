@@ -54,21 +54,11 @@
 
     <section class="mb-8">
       <h3 class="text-base font-medium mb-2">How It Works</h3>
-      <pre class="bg-white p-3 rounded-md text-sm overflow-x-auto mb-4 ring-1 ring-gray-200"><code class="mermaid">graph TD
-  A[Incoming Request] --> B[Process Request]
-  B --> C[Store in History]
-  C --> D{History Full?}
-  D -->|Yes| E[Remove Oldest]
-  D -->|No| F[Keep All]
-  E --> F
-  F --> G[Return Response]
-  H[History API] --> I[Retrieve Requests]
-  I --> J[Filter & Search]
-  J --> K[Return Results]
-  L[Replay API] --> M[Get Request by ID]
-  M --> N[Re-execute Request]
-  N --> O[Return New Response]</code></pre>
-    </section>
+<pre class="bg-white p-3 rounded-md text-sm overflow-x-auto mb-4 ring-1 ring-gray-200"><code class="mermaid">graph TD
+  subgraph User Workflow
+    A[GET /history] --> B[Find Request ID]
+    B --> C[POST /replay]
+  end</code></pre>
 
     <section class="mb-8">
       <h3 class="text-base font-medium mb-2">Configuration</h3>
@@ -128,13 +118,13 @@ curl http://localhost:8080/history
       <h4 class="font-medium text-sm mt-2">Replay by Request ID</h4>
       <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -X POST http://localhost:8080/replay \
   -H "Content-Type: application/json" \
-  -d '{"id": "req_1234567890"}'</code></pre>
+  -d '{"id": "ab2a11b7d4cfc1c9"}'</code></pre>
 
       <h4 class="font-medium text-sm mt-4">Replay with Modifications</h4>
       <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -X POST http://localhost:8080/replay \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "req_1234567890",
+    "id": "ab2a11b7d4cfc1c9",
     "modify_headers": {
       "X-Test-Environment": "staging",
       "Authorization": "Bearer new-token"

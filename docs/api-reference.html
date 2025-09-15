@@ -95,27 +95,20 @@
             <span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">GET</span>
             <span class="font-mono text-sm">/history</span>
           </div>
-          <p class="text-sm text-gray-700">Retrieve stored request history with optional filtering and pagination.</p>
-          <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>Query Parameters:
-- page: Page number (default: 1)
-- per_page: Items per page (default: 50)
-- method: Filter by HTTP method
-- path: Filter by request path
-- since: Filter by timestamp (RFC3339)
-- until: Filter by timestamp (RFC3339)</code></pre>
+          <p class="text-sm text-gray-700">Retrieve stored request history.</p>  
         </div>
         <div class="border-l-4 border-emerald-500 pl-3">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">POST</span>
-            <span class="font-mono text-sm">/replay/{request_id}</span>
+            <span class="font-mono text-sm">/replay</span>
           </div>
-          <p class="text-sm text-gray-700">Replay a specific request by ID with optional modifications.</p>
-          <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>Body:
+  <p class="text-sm text-gray-700">Replay a specific request by ID with optional modifications.</p>
+  <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>Body:
 {
-  "modify_headers": {"X-Test": "value"},
-  "modify_body": "new body content",
-  "target_endpoint": "http://target.com"
+  "id": "65b4c414c94d3a00010c2c1a",
+  "target": "https://external-api.example.com/endpoint"
 }</code></pre>
+</div>
         </div>
         <div class="border-l-4 border-emerald-500 pl-3">
           <div class="flex items-center gap-2 mb-1">
