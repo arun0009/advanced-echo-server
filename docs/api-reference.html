@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Reference - Advanced Echo Server</title>
+  <meta name="description" content="Complete HTTP API endpoint documentation and reference guide">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .header-img { max-width: 200px; }
+    .section { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem; }
+    pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.875rem; }
+    .feature-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: white; }
+    th, td { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: left; }
+    th { background: #f1f5f9; font-weight: 600; }
+    .nav-link { display: inline-block; padding: 0.5rem 1rem; margin: 0.25rem; background: #f1f5f9; border-radius: 6px; text-decoration: none; color: #374151; transition: all 0.2s; }
+    .nav-link:hover { background: #e5e7eb; }
+    .nav-link.active { background: #3b82f6; color: white; }
+    .endpoint { background: #f8fafc; border-left: 4px solid #3b82f6; padding: 1rem; margin: 1rem 0; }
+    .method { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: bold; font-size: 0.75rem; }
+    .get { background: #dbeafe; color: #1e40af; }
+    .post { background: #dcfce7; color: #166534; }
+    .delete { background: #fee2e2; color: #dc2626; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+    <div class="section text-center py-6">
+      <img src="/docs/aes.png" alt="Advanced Echo Server" class="header-img mx-auto mb-4">
+      <h1 class="text-4xl font-bold mb-2">API Reference</h1>
+      <p class="text-xl">Complete HTTP API endpoint documentation</p>
+    </div>
+  </header>
+
+  <nav class="bg-white border-b shadow-sm">
+    <div class="section flex flex-wrap justify-center py-4">
+      <a href="index.html" class="nav-link">🏠 Home</a>
+      <a href="simple-echo.html" class="nav-link">Simple Echo</a>
+      <a href="delays.html" class="nav-link">Delays</a>
+      <a href="back-pressure.html" class="nav-link">Back Pressure</a>
+      <a href="scenarios.html" class="nav-link">Scenarios</a>
+      <a href="custom-responses.html" class="nav-link">Custom Responses</a>
+      <a href="websockets.html" class="nav-link">WebSockets</a>
+      <a href="sse.html" class="nav-link">SSE</a>
+      <a href="history-replay.html" class="nav-link">History & Replay</a>
+      <a href="observability.html" class="nav-link">Observability</a>
+      <a href="security.html" class="nav-link">Security</a>
+      <a href="api-reference.html" class="nav-link active">API Reference</a>
+    </div>
+  </nav>
+
+  <main class="section">
+    <div class="feature-card">
+      <h2 class="text-2xl font-bold mb-4">Core Endpoints</h2>
+      
+      <div class="endpoint">
+        <div class="flex items-center mb-2">
+          <span class="method get">GET</span>
+          <span class="ml-2 font-mono">/ or /echo</span>
+        </div>
+        <p>Basic echo endpoint - returns request info for GET, mirrors body for other methods</p>
+      </div>
+
+      <div class="endpoint">
+        <div class="flex items-center mb-2">
+          <span class="method get">GET</span>
+          <span class="ml-2 font-mono">/health</span>
+        </div>
+        <p>Health check endpoint - returns server status and basic metrics</p>
+      </div>
+
+      <div class="endpoint">
+        <div class="flex items-center mb-2">
+          <span class="method get">GET</span>
+          <span class="ml-2 font-mono">/metrics</span>
+        </div>
+        <p>Prometheus metrics endpoint - returns all collected metrics</p>
+      </div>
+
+      <div class="endpoint">
+        <div class="flex items-center mb-2">
+          <span class="method get">GET</span>
+          <span class="ml-2 font-mono">/ws</span>
+        </div>
+        <p>WebSocket upgrade endpoint - establishes WebSocket connection for real-time communication</p>
+      </div>
+
+      <div class="endpoint">
+        <div class="flex items-center mb-2">
+          <span class="method get">GET</span>
+          <span class="ml-2 font-mono">/sse</span>
+        </div>
+        <p>Server-Sent Events endpoint - streams JSON events to connected clients</p>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <h2 class="text-2xl font-bold mb-4">Management Endpoints</h2>
+
+      <div class="endpoint">
+        <div class="flex items-center mb-2">
+          <span class="method get">GET</span>
+          <span class="ml-2 font-mono">/history</span>
+        </div>
+        <p>Retrieve stored request history with optional filtering and pagination</p>
+        <pre><code>Query Parameters:
+- page: Page number (default: 1)
+- per_page: Items per page (default: 50)
+- method: Filter by HTTP method
+- path: Filter by request path
+- since: Filter by timestamp (RFC3339)
+- until: Filter by timestamp (RFC3339)</code></pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="flex items-center mb-2">
+          <span class="method post">POST</span>
+          <span class="ml-2 font-mono">/replay/{request_id}</span>
+        </div>
+        <p>Replay a specific request by ID with optional modifications</p>
+        <pre><code>Body:
+{
+  "modify_headers": {"X-Test": "value"},
+  "modify_body": "new body content",
+  "target_endpoint": "http://target.com"
+}</code></pre>
+      </div>
+
+      <div class="endpoint">
+        <div class="flex items-center mb-2">
+          <span class="method get">GET</span>
+          <span class="ml-2 font-mono">/scenario</span>
+        </div>
+        <p>Get current scenarios configuration</p>
+      </div>
+
+      <div class="endpoint">
+        <div class="flex items-center mb-2">
+          <span class="method post">POST</span>
+          <span class="ml-2 font-mono">/scenario</span>
+        </div>
+        <p>Update scenarios configuration with JSON array</p>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <h2 class="text-2xl font-bold mb-4">Request Headers</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Header</th>
+            <th>Purpose</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>X-Echo-Delay</code></td><td>Add simple delay</td><td><code>500ms</code></td></tr>
+          <tr><td><code>X-Echo-Status</code></td><td>Set response status</td><td><code>201</code></td></tr>
+          <tr><td><code>X-Echo-Chaos</code></td><td>Random error percentage</td><td><code>15</code></td></tr>
+          <tr><td><code>X-Echo-Response-Size</code></td><td>Set response size</td><td><code>1024</code></td></tr>
+          <tr><td><code>X-Echo-Compress</code></td><td>Enable compression</td><td><code>gzip</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer class="bg-gray-800 text-white text-center py-8">
+    <div class="section">
+      <p class="mb-2">Advanced Echo Server - Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300 hover:text-blue-200">MIT License</a></p>
+    </div>
+  </footer>
+</body>
+</html>

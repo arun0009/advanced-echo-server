@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scenarios - Advanced Echo Server</title>
+  <link rel="icon" type="image/x-icon" href="/docs/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .header-img { max-width: 200px; }
+    .section { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+    .mermaid { text-align: center; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <!-- Header -->
+  <header class="bg-blue-600 text-white text-center py-6">
+    <img src="/docs/aes.png" alt="Advanced Echo Server" class="header-img mx-auto mb-4">
+    <h1 class="text-4xl font-bold mt-4">Scenarios</h1>
+    <p class="text-lg mt-2">Define custom response sequences via YAML or API</p>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="bg-gray-800 text-white sticky top-0 shadow-md">
+    <div class="section flex flex-wrap justify-center space-x-4 py-4">
+      <a href="/docs/index.html" class="hover:text-blue-300">Home</a>
+      <a href="/docs/simple-echo.html" class="hover:text-blue-300">Simple Echo</a>
+      <a href="/docs/delays.html" class="hover:text-blue-300">Delays</a>
+      <a href="/docs/back-pressure.html" class="hover:text-blue-300">Back Pressure</a>
+      <a href="/docs/scenarios.html" class="font-bold hover:text-blue-300">Scenarios</a>
+      <a href="/docs/custom-responses.html" class="hover:text-blue-300">Custom Responses</a>
+      <a href="/docs/websockets.html" class="hover:text-blue-300">WebSockets</a>
+      <a href="/docs/sse.html" class="hover:text-blue-300">SSE</a>
+      <a href="/docs/history-replay.html" class="hover:text-blue-300">History & Replay</a>
+      <a href="/docs/observability.html" class="hover:text-blue-300">Observability</a>
+      <a href="/docs/security.html" class="hover:text-blue-300">Security</a>
+      <a href="/docs/api-reference.html" class="hover:text-blue-300">API Reference</a>
+      <a href="/docs/contributing.html" class="hover:text-blue-300">Contributing</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="section">
+    <h2 class="text-2xl font-bold mb-4">Scenarios</h2>
+    <p>Define custom response sequences for specific paths using YAML files or the <code>/scenario</code> API. Scenarios allow cycling through predefined responses (status, body, headers, delays) to simulate complex behaviors.</p>
+
+    <h3 class="text-xl font-semibold mt-4">How It Works</h3>
+    <pre class="mermaid">
+      graph TD
+        A[Receive Request] --> B{Match Path}
+        B -->|Scenario Found| C[Get Next Response]
+        B -->|No Scenario| D[Default Echo]
+        C --> E[Apply Status, Body, Headers, Delay]
+        E --> F[Update Cycle Index]
+        F --> G[Respond]
+        D --> G
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">YAML Scenarios</h3>
+    <p>Load scenarios from a YAML file specified by <code>ECHO_SCENARIO_FILE</code> (default: <code>scenarios.yaml</code>).</p>
+    <ul class="list-disc ml-6">
+      <li><strong>Env</strong>: <code>ECHO_SCENARIO_FILE=/path/to/scenarios.yaml</code></li>
+      <li><strong>Example YAML</strong>:</li>
+    </ul>
+    <pre>
+      <code>
+- path: /api/users
+  responses:
+    - status: 200
+      delay: 100ms
+      headers:
+        Content-Type: application/json
+      body: '{"users": []}'
+    - status: 500
+      delay: 200ms
+      body: '{"error": "db failure"}'
+      </code>
+    </pre>
+    <p>Requests to <code>/api/users</code> cycle through responses (200, 500).</p>
+
+    <h3 class="text-xl font-semibold mt-4">Scenario API</h3>
+    <p>Dynamically update scenarios via <code>/scenario</code> endpoint.</p>
+    <ul class="list-disc ml-6">
+      <li><strong>GET</strong>: Retrieve current scenarios.</li>
+      <li><strong>POST</strong>: Update scenarios with JSON array.</li>
+      <li><strong>Example</strong>:</li>
+    </ul>
+    <pre>
+      <code>
+curl -X POST http://localhost:8080/scenario -H "Content-Type: application/json" -d '[
+  {
+    "path": "/test",
+    "responses": [
+      {"status": 200, "body": "OK", "delay": "100ms"},
+      {"status": 429, "body": "Too Many Requests"}
+    ]
+  }
+]'
+# Response: {"status": "scenarios updated"}
+curl /test  # Returns 200, then 429, cycling
+      </code>
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Notes</h3>
+    <ul class="list-disc ml-6">
+      <li>Scenarios override default echo behavior for matching paths.</li>
+      <li>Responses cycle in order per path.</li>
+      <li>Invalid YAML or JSON results in HTTP 400.</li>
+      <li>Logs indicate scenario application; metrics track via <code>echo_requests_total</code>.</li>
+    </ul>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white text-center py-6">
+    <p>Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300">MIT</a></p>
+  </footer>
+
+  <!-- Initialize Mermaid -->
+  <script>
+    mermaid.initialize({ startOnLoad: true });
+    document.querySelectorAll('nav a').forEach(anchor => {
+      anchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = anchor.getAttribute('href');
+      });
+    });
+  </script>
+</body>
+</html>

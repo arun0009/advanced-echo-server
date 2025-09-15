@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Echo - Advanced Echo Server</title>
+  <link rel="icon" type="image/x-icon" href="/docs/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .header-img { max-width: 200px; }
+    .section { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+    .mermaid { text-align: center; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <!-- Header -->
+  <header class="bg-blue-600 text-white text-center py-6">
+    <img src="/docs/aes.png" alt="Advanced Echo Server" class="header-img mx-auto mb-4">
+    <h1 class="text-4xl font-bold mt-4">Simple Echo</h1>
+    <p class="text-lg mt-2">Mirror requests with basic functionality</p>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="bg-gray-800 text-white sticky top-0 shadow-md">
+    <div class="section flex flex-wrap justify-center space-x-4 py-4">
+      <a href="/docs/index.html" class="hover:text-blue-300">Home</a>
+      <a href="/docs/simple-echo.html" class="font-bold hover:text-blue-300">Simple Echo</a>
+      <a href="/docs/delays.html" class="hover:text-blue-300">Delays</a>
+      <a href="/docs/back-pressure.html" class="hover:text-blue-300">Back Pressure</a>
+      <a href="/docs/scenarios.html" class="hover:text-blue-300">Scenarios</a>
+      <a href="/docs/custom-responses.html" class="hover:text-blue-300">Custom Responses</a>
+      <a href="/docs/websockets.html" class="hover:text-blue-300">WebSockets</a>
+      <a href="/docs/sse.html" class="hover:text-blue-300">SSE</a>
+      <a href="/docs/history-replay.html" class="hover:text-blue-300">History & Replay</a>
+      <a href="/docs/observability.html" class="hover:text-blue-300">Observability</a>
+      <a href="/docs/security.html" class="hover:text-blue-300">Security</a>
+      <a href="/docs/api-reference.html" class="hover:text-blue-300">API Reference</a>
+      <a href="/docs/contributing.html" class="hover:text-blue-300">Contributing</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="section">
+    <h2 class="text-2xl font-bold mb-4">Simple Echo</h2>
+    <p>The core functionality of Advanced Echo Server is to mirror incoming HTTP requests. The server echoes the request body for non-GET requests and provides detailed request information for empty GET requests. It automatically adds <code>X-Request-ID</code> and <code>X-Echo-Request-Count</code> headers to track requests.</p>
+
+    <h3 class="text-xl font-semibold mt-4">How It Works</h3>
+    <pre class="mermaid">
+      graph TD
+        A[Receive Request] --> B{Check Method}
+        B -->|GET, No Body| C[Return Request Info]
+        B -->|Other Methods| D[Echo Request Body]
+        C --> E[Add X-Request-ID, X-Echo-Request-Count]
+        D --> E
+        E --> F[Respond with Content-Type]
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Echoing Request Body</h3>
+    <p>For POST, PUT, PATCH, etc., the server echoes the request body with the same Content-Type (or <code>text/plain</code> if unspecified).</p>
+    <ul class="list-disc ml-6">
+      <li><strong>Endpoint</strong>: <code>ANY /</code></li>
+      <li><strong>Example</strong>:</li>
+    </ul>
+    <pre>
+      <code>
+curl -X POST http://localhost:8080/ -H "Content-Type: application/json" -d '{"message": "hello"}'
+# Response: {"message": "hello"}
+# Headers: X-Request-ID: <generated>, X-Echo-Request-Count: <count>
+      </code>
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Request Info for GET</h3>
+    <p>For GET requests with no body, the server returns a plain-text summary of the request (method, URI, headers, client IP, timestamp).</p>
+    <ul class="list-disc ml-6">
+      <li><strong>Endpoint</strong>: <code>GET /</code></li>
+      <li><strong>Example</strong>:</li>
+    </ul>
+    <pre>
+      <code>
+curl http://localhost:8080/
+# Response:
+# GET / HTTP/1.1
+# Host: localhost:8080
+# User-Agent: curl/7.68.0
+# Accept: */*
+# Client-IP: 127.0.0.1
+# Timestamp: 2025-09-14T20:03:00Z
+      </code>
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Notes</h3>
+    <ul class="list-disc ml-6">
+      <li>Request bodies are limited by <code>MAX_BODY_SIZE</code> (default 10MB).</li>
+      <li><code>X-Request-ID</code> is auto-generated if not provided.</li>
+      <li>Requests are logged if <code>LOG_REQUESTS</code> is enabled.</li>
+    </ul>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white text-center py-6">
+    <p>Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300">MIT</a></p>
+  </footer>
+
+  <!-- Initialize Mermaid -->
+  <script>
+    mermaid.initialize({ startOnLoad: true });
+    document.querySelectorAll('nav a').forEach(anchor => {
+      anchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = anchor.getAttribute('href');
+      });
+    });
+  </script>
+</body>
+</html>

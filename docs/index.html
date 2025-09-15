@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Echo Server</title>
+  <link rel="icon" type="image/x-icon" href="/docs/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .header-img { max-width: 200px; }
+    .section { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+    .mermaid { text-align: center; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <!-- Header -->
+  <header class="bg-blue-600 text-white text-center py-6">
+    <img src="/docs/echo-gopher.png" alt="Echo the Gopher Mascot" class="header-img mx-auto">
+    <h1 class="text-4xl font-bold mt-4">Advanced Echo Server</h1>
+    <p class="text-lg mt-2">A Go-powered tool for API testing, load testing, and chaos engineering</p>
+    <div class="mt-4 space-x-4">
+      <a href="https://github.com/arun0009/advanced-echo-server" class="text-blue-200 hover:underline">GitHub</a>
+      <a href="https://hub.docker.com/r/arun0009/advanced-echo-server" class="text-blue-200 hover:underline">Docker Hub</a>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="bg-gray-800 text-white sticky top-0 shadow-md">
+    <div class="section flex flex-wrap justify-center space-x-4 py-4">
+      <a href="/docs/index.html" class="font-bold hover:text-blue-300">Home</a>
+      <a href="/docs/simple-echo.html" class="hover:text-blue-300">Simple Echo</a>
+      <a href="/docs/delays.html" class="hover:text-blue-300">Delays</a>
+      <a href="/docs/back-pressure.html" class="hover:text-blue-300">Back Pressure</a>
+      <a href="/docs/scenarios.html" class="hover:text-blue-300">Scenarios</a>
+      <a href="/docs/custom-responses.html" class="hover:text-blue-300">Custom Responses</a>
+      <a href="/docs/websockets.html" class="hover:text-blue-300">WebSockets</a>
+      <a href="/docs/sse.html" class="hover:text-blue-300">SSE</a>
+      <a href="/docs/history-replay.html" class="hover:text-blue-300">History & Replay</a>
+      <a href="/docs/observability.html" class="hover:text-blue-300">Observability</a>
+      <a href="/docs/security.html" class="hover:text-blue-300">Security</a>
+      <a href="/docs/api-reference.html" class="hover:text-blue-300">API Reference</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="section">
+    <h2 class="text-2xl font-bold mb-4">Overview</h2>
+    <p>Advanced Echo Server is a lightweight, extensible Go application that mirrors HTTP requests with advanced control for testing. Built for developers and DevOps engineers, it supports:</p>
+    <ul class="list-disc ml-6 mb-4">
+      <li><strong>API Testing</strong>: Custom responses, headers, and status codes.</li>
+      <li><strong>Load Testing</strong>: Simulate latency and large payloads.</li>
+      <li><strong>Chaos Engineering</strong>: Inject random failures and errors.</li>
+      <li><strong>Real-Time Protocols</strong>: WebSockets and Server-Sent Events (SSE).</li>
+      <li><strong>Observability</strong>: Prometheus metrics and detailed logging.</li>
+    </ul>
+    <p>Navigate the menu above to explore each feature with examples and configurations.</p>
+
+    <h2 class="text-2xl font-bold mt-6 mb-4">Quick Start</h2>
+    <h3 class="text-xl font-semibold">Docker (Recommended)</h3>
+    <pre>
+      <code>
+# Pull and run
+docker pull arun0009/advanced-echo-server:latest
+docker run -p 8080:8080 arun0009/advanced-echo-server:latest
+
+# Test basic echo
+curl -X POST http://localhost:8080/echo -H "Content-Type: application/json" -d '{"test": "hello"}'
+      </code>
+    </pre>
+    <h3 class="text-xl font-semibold mt-4">Go</h3>
+    <pre>
+      <code>
+git clone https://github.com/arun0009/advanced-echo-server.git
+cd advanced-echo-server
+go run ./cmd/advanced-echo-server/main.go
+      </code>
+    </pre>
+    <h3 class="text-xl font-semibold mt-4">Docker Compose</h3>
+    <pre>
+      <code>
+version: '3.8'
+services:
+  echo-server:
+    image: arun0009/advanced-echo-server:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - ECHO_CHAOS=10
+      - ECHO_DELAY=100ms
+      </code>
+    </pre>
+    <p>Test health: <code>curl http://localhost:8080/health</code></p>
+
+    <h2 class="text-2xl font-bold mt-6 mb-4">Configuration</h2>
+    <p>Control the server via environment variables (defaults) or HTTP headers (per-request). Dynamic scenarios update via API.</p>
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="border p-2">Variable</th>
+          <th class="border p-2">Description</th>
+          <th class="border p-2">Default</th>
+          <th class="border p-2">Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="border p-2"><code>PORT</code></td>
+          <td class="border p-2">Server port</td>
+          <td class="border p-2"><code>8080</code></td>
+          <td class="border p-2"><code>443</code></td>
+        </tr>
+        <tr>
+          <td class="border p-2"><code>ENABLE_TLS</code></td>
+          <td class="border p-2">Enable HTTPS</td>
+          <td class="border p-2"><code>false</code></td>
+          <td class="border p-2"><code>true</code></td>
+        </tr>
+        <tr>
+          <td class="border p-2"><code>MAX_BODY_SIZE</code></td>
+          <td class="border p-2">Max request body (bytes)</td>
+          <td class="border p-2"><code>10485760</code> (10MB)</td>
+          <td class="border p-2"><code>5242880</code></td>
+        </tr>
+        <tr>
+          <td class="border p-2"><code>ECHO_CHAOS</code></td>
+          <td class="border p-2">Random failure %</td>
+          <td class="border p-2"><code>""</code></td>
+          <td class="border p-2"><code>15</code></td>
+        </tr>
+        <tr>
+          <td class="border p-2"><code>ECHO_HISTORY_SIZE</code></td>
+          <td class="border p-2">Max stored requests</td>
+          <td class="border p-2"><code>100</code></td>
+          <td class="border p-2"><code>500</code></td>
+        </tr>
+        <tr>
+          <td class="border p-2"><code>ECHO_SCENARIO_FILE</code></td>
+          <td class="border p-2">YAML scenarios path</td>
+          <td class="border p-2"><code>scenarios.yaml</code></td>
+          <td class="border p-2"><code>/config/scenarios.yaml</code></td>
+        </tr>
+        <tr>
+          <td class="border p-2"><code>ECHO_RATE_LIMIT_RPS</code></td>
+          <td class="border p-2">Requests/sec limit</td>
+          <td class="border p-2"><code>0</code> (disabled)</td>
+          <td class="border p-2"><code>50</code></td>
+        </tr>
+        <tr>
+          <td class="border p-2"><code>ECHO_RATE_LIMIT_BURST</code></td>
+          <td class="border p-2">Burst allowance</td>
+          <td class="border p-2"><code>0</code> (disabled)</td>
+          <td class="border p-2"><code>100</code></td>
+        </tr>
+        <tr>
+          <td class="border p-2"><code>ECHO_SSE_TICKER</code></td>
+          <td class="border p-2">SSE event interval</td>
+          <td class="border p-2"><code>5s</code></td>
+          <td class="border p-2"><code>1s</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="mt-4">See feature pages for specific headers and environment variables.</p>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white text-center py-6">
+    <p>Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300">MIT</a></p>
+  </footer>
+
+  <!-- Initialize Mermaid -->
+  <script>
+    mermaid.initialize({ startOnLoad: true });
+    document.querySelectorAll('nav a').forEach(anchor => {
+      anchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = anchor.getAttribute('href');
+      });
+    });
+  </script>
+</body>
+</html>

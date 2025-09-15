@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>History & Replay - Advanced Echo Server</title>
+  <meta name="description" content="Request logging, storage, and replay capabilities for comprehensive testing workflows">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .header-img { max-width: 200px; }
+    .section { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem; }
+    pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.875rem; }
+    .mermaid { text-align: center; background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin: 1rem 0; }
+    .feature-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: white; }
+    th, td { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: left; }
+    th { background: #f1f5f9; font-weight: 600; }
+    .nav-link { display: inline-block; padding: 0.5rem 1rem; margin: 0.25rem; background: #f1f5f9; border-radius: 6px; text-decoration: none; color: #374151; transition: all 0.2s; }
+    .nav-link:hover { background: #e5e7eb; }
+    .nav-link.active { background: #3b82f6; color: white; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+    <div class="section text-center py-6">
+      <img src="/docs/aes.png" alt="Advanced Echo Server" class="header-img mx-auto mb-4">
+      <h1 class="text-4xl font-bold mb-2">History & Replay</h1>
+      <p class="text-xl">Request logging, storage, and replay capabilities</p>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="bg-white border-b shadow-sm">
+    <div class="section flex flex-wrap justify-center py-4">
+      <a href="index.html" class="nav-link">🏠 Home</a>
+      <a href="simple-echo.html" class="nav-link">Simple Echo</a>
+      <a href="delays.html" class="nav-link">Delays</a>
+      <a href="back-pressure.html" class="nav-link">Back Pressure</a>
+      <a href="scenarios.html" class="nav-link">Scenarios</a>
+      <a href="custom-responses.html" class="nav-link">Custom Responses</a>
+      <a href="websockets.html" class="nav-link">WebSockets</a>
+      <a href="sse.html" class="nav-link">SSE</a>
+      <a href="history-replay.html" class="nav-link active">History & Replay</a>
+      <a href="observability.html" class="nav-link">Observability</a>
+      <a href="security.html" class="nav-link">Security</a>
+      <a href="api-reference.html" class="nav-link">API Reference</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="section">
+    <div class="feature-card">
+      <h2 class="text-2xl font-bold mb-4">Request History & Replay</h2>
+      <p>Advanced Echo Server maintains a configurable history of recent requests, allowing you to inspect, analyze, and replay past interactions. This feature is essential for debugging, testing, and understanding application behavior patterns.</p>
+    </div>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">How It Works</h3>
+      <div class="feature-card">
+        <pre class="mermaid">
+graph TD
+    A[Incoming Request] --> B[Process Request]
+    B --> C[Store in History]
+    C --> D{History Full?}
+    D -->|Yes| E[Remove Oldest]
+    D -->|No| F[Keep All]
+    E --> F
+    F --> G[Return Response]
+    
+    H[History API] --> I[Retrieve Requests]
+    I --> J[Filter & Search]
+    J --> K[Return Results]
+    
+    L[Replay API] --> M[Get Request by ID]
+    M --> N[Re-execute Request]
+    N --> O[Return New Response]
+    
+    style A fill:#e1f5fe
+    style G fill:#e8f5e8
+    style C fill:#fff3e0
+    style I fill:#f3e5f5
+</pre>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Configuration</h3>
+      <div class="feature-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Environment Variable</th>
+              <th>Description</th>
+              <th>Default</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>ECHO_HISTORY_SIZE</code></td>
+              <td>Maximum number of requests to store</td>
+              <td><code>100</code></td>
+              <td><code>1000</code></td>
+            </tr>
+            <tr>
+              <td><code>ECHO_HISTORY_ENABLED</code></td>
+              <td>Enable/disable request history</td>
+              <td><code>true</code></td>
+              <td><code>false</code></td>
+            </tr>
+            <tr>
+              <td><code>ECHO_HISTORY_INCLUDE_BODY</code></td>
+              <td>Store request/response bodies</td>
+              <td><code>true</code></td>
+              <td><code>false</code></td>
+            </tr>
+            <tr>
+              <td><code>ECHO_HISTORY_MAX_BODY_SIZE</code></td>
+              <td>Maximum body size to store (bytes)</td>
+              <td><code>1048576</code></td>
+              <td><code>512000</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Viewing Request History</h3>
+      <div class="feature-card">
+        <p class="mb-4">Retrieve stored requests using the history API endpoint:</p>
+        
+        <h4 class="font-semibold mb-2">Get All Requests</h4>
+        <pre><code># Get all stored requests
+curl http://localhost:8080/history
+
+# Response format:
+{
+  "requests": [
+    {
+      "id": "req_1234567890",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "method": "POST",
+      "path": "/api/users",
+      "headers": {
+        "Content-Type": "application/json",
+        "User-Agent": "curl/7.68.0"
+      },
+      "body": "{\"name\": \"John Doe\"}",
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Request-ID": "req_1234567890"
+        },
+        "body": "{\"name\": \"John Doe\"}",
+        "duration_ms": 45
+      }
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "per_page": 50
+}</code></pre>
+
+        <h4 class="font-semibold mb-2 mt-4">Filtering and Pagination</h4>
+        <pre><code># Filter by method and path
+curl "http://localhost:8080/history?method=POST&path=/api/users"
+
+# Pagination
+curl "http://localhost:8080/history?page=2&per_page=25"
+
+# Filter by time range
+curl "http://localhost:8080/history?since=2024-01-15T00:00:00Z&until=2024-01-15T23:59:59Z"
+
+# Search by request ID
+curl "http://localhost:8080/history?request_id=req_1234567890"</code></pre>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Request Replay</h3>
+      <div class="feature-card">
+        <p class="mb-4">Replay previous requests to test behavior changes or debug issues:</p>
+        
+        <h4 class="font-semibold mb-2">Replay by Request ID</h4>
+        <pre><code># Replay a specific request
+curl -X POST http://localhost:8080/replay/req_1234567890
+
+# Response includes both original and new response
+{
+  "original_request": {
+    "id": "req_1234567890",
+    "method": "POST",
+    "path": "/api/users",
+    "body": "{\"name\": \"John Doe\"}"
+  },
+  "original_response": {
+    "status": 200,
+    "body": "{\"name\": \"John Doe\"}",
+    "duration_ms": 45
+  },
+  "replay_response": {
+    "status": 200,
+    "body": "{\"name\": \"John Doe\"}",
+    "duration_ms": 52,
+    "replayed_at": "2024-01-15T11:00:00Z"
+  }
+}</code></pre>
+
+        <h4 class="font-semibold mb-2 mt-4">Batch Replay</h4>
+        <pre><code># Replay multiple requests
+curl -X POST http://localhost:8080/replay/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "request_ids": ["req_1234567890", "req_1234567891"],
+    "parallel": true,
+    "include_original": false
+  }'</code></pre>
+
+        <h4 class="font-semibold mb-2 mt-4">Replay with Modifications</h4>
+        <pre><code># Replay with header modifications
+curl -X POST http://localhost:8080/replay/req_1234567890 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "modify_headers": {
+      "X-Test-Environment": "staging",
+      "Authorization": "Bearer new-token"
+    },
+    "modify_body": "{\"name\": \"Jane Doe\"}",
+    "target_endpoint": "http://staging.example.com"
+  }'</code></pre>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">History Management</h3>
+      <div class="feature-card">
+        <h4 class="font-semibold mb-2">Clear History</h4>
+        <pre><code># Clear all stored requests
+curl -X DELETE http://localhost:8080/history
+
+# Clear requests older than specified time
+curl -X DELETE "http://localhost:8080/history?older_than=2024-01-14T00:00:00Z"
+
+# Clear requests matching criteria
+curl -X DELETE "http://localhost:8080/history?method=GET&path=/health"</code></pre>
+
+        <h4 class="font-semibold mb-2 mt-4">Export History</h4>
+        <pre><code># Export history as JSON
+curl http://localhost:8080/history/export > requests.json
+
+# Export specific time range
+curl "http://localhost:8080/history/export?since=2024-01-15T00:00:00Z" > recent_requests.json
+
+# Export as CSV for analysis
+curl -H "Accept: text/csv" http://localhost:8080/history/export > requests.csv</code></pre>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Use Cases</h3>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="feature-card">
+          <h4 class="font-semibold mb-2 text-blue-600">🐛 Debugging</h4>
+          <ul class="text-sm space-y-1">
+            <li>• Inspect failed requests and responses</li>
+            <li>• Compare behavior before/after changes</li>
+            <li>• Trace request patterns and timing</li>
+            <li>• Identify problematic request sequences</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <h4 class="font-semibold mb-2 text-blue-600">🧪 Testing</h4>
+          <ul class="text-sm space-y-1">
+            <li>• Replay production requests in staging</li>
+            <li>• Test API changes with real data</li>
+            <li>• Validate response consistency</li>
+            <li>• Performance regression testing</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <h4 class="font-semibold mb-2 text-blue-600">📊 Analysis</h4>
+          <ul class="text-sm space-y-1">
+            <li>• Monitor request patterns over time</li>
+            <li>• Analyze response time distributions</li>
+            <li>• Track error rates and patterns</li>
+            <li>• Generate usage reports</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <h4 class="font-semibold mb-2 text-blue-600">🔄 Load Testing</h4>
+          <ul class="text-sm space-y-1">
+            <li>• Replay requests at higher rates</li>
+            <li>• Generate realistic traffic patterns</li>
+            <li>• Test with production-like data</li>
+            <li>• Stress test specific endpoints</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="text-xl font-semibold mb-4">Best Practices</h3>
+      <div class="feature-card">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <h4 class="font-semibold text-blue-800 mb-2">💡 Performance Tips</h4>
+          <ul class="text-blue-700 text-sm space-y-1">
+            <li>• Set appropriate history size limits based on memory constraints</li>
+            <li>• Disable body storage for high-volume endpoints if not needed</li>
+            <li>• Use time-based filtering to focus on relevant requests</li>
+            <li>• Regular cleanup of old history to prevent memory issues</li>
+          </ul>
+        </div>
+        
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+          <h4 class="font-semibold text-amber-800 mb-2">⚠️ Security Considerations</h4>
+          <ul class="text-amber-700 text-sm space-y-1">
+            <li>• Be cautious with storing sensitive data in request bodies</li>
+            <li>• Consider disabling history for authentication endpoints</li>
+            <li>• Implement proper access controls for history endpoints</li>
+            <li>• Regularly purge history containing sensitive information</li>
+          </ul>
+        </div>
+
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h4 class="font-semibold text-green-800 mb-2">✅ Monitoring</h4>
+          <ul class="text-green-700 text-sm space-y-1">
+            <li>• Monitor history storage usage and performance impact</li>
+            <li>• Track replay success rates and response differences</li>
+            <li>• Set up alerts for unusual request patterns</li>
+            <li>• Use metrics to optimize history configuration</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white text-center py-8">
+    <div class="section">
+      <p class="mb-2">Advanced Echo Server - Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300 hover:text-blue-200">MIT License</a></p>
+      <p class="text-sm text-gray-400">Built with Go • Dockerized • Production Ready</p>
+    </div>
+  </footer>
+
+  <!-- Initialize Mermaid -->
+  <script>
+    mermaid.initialize({ 
+      startOnLoad: true,
+      theme: 'default',
+      themeVariables: {
+        primaryColor: '#3b82f6',
+        primaryTextColor: '#1e40af',
+        primaryBorderColor: '#2563eb',
+        lineColor: '#6b7280',
+        secondaryColor: '#f3f4f6',
+        tertiaryColor: '#f9fafb'
+      }
+    });
+  </script>
+</body>
+</html>

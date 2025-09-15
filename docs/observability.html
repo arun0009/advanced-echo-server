@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Observability - Advanced Echo Server</title>
+  <meta name="description" content="Prometheus metrics, logging, health checks, and comprehensive monitoring capabilities">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .header-img { max-width: 200px; }
+    .section { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem; }
+    pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.875rem; }
+    .mermaid { text-align: center; background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin: 1rem 0; }
+    .feature-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: white; }
+    th, td { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: left; }
+    th { background: #f1f5f9; font-weight: 600; }
+    .nav-link { display: inline-block; padding: 0.5rem 1rem; margin: 0.25rem; background: #f1f5f9; border-radius: 6px; text-decoration: none; color: #374151; transition: all 0.2s; }
+    .nav-link:hover { background: #e5e7eb; }
+    .nav-link.active { background: #3b82f6; color: white; }
+    .metric-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; margin: 0.5rem 0; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+    <div class="section text-center py-6">
+      <img src="/docs/aes.png" alt="Advanced Echo Server" class="header-img mx-auto mb-4">
+      <h1 class="text-4xl font-bold mb-2">Observability</h1>
+      <p class="text-xl">Prometheus metrics, logging, and monitoring</p>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="bg-white border-b shadow-sm">
+    <div class="section flex flex-wrap justify-center py-4">
+      <a href="index.html" class="nav-link">🏠 Home</a>
+      <a href="simple-echo.html" class="nav-link">Simple Echo</a>
+      <a href="delays.html" class="nav-link">Delays</a>
+      <a href="back-pressure.html" class="nav-link">Back Pressure</a>
+      <a href="scenarios.html" class="nav-link">Scenarios</a>
+      <a href="custom-responses.html" class="nav-link">Custom Responses</a>
+      <a href="websockets.html" class="nav-link">WebSockets</a>
+      <a href="sse.html" class="nav-link">SSE</a>
+      <a href="history-replay.html" class="nav-link">History & Replay</a>
+      <a href="observability.html" class="nav-link active">Observability</a>
+      <a href="security.html" class="nav-link">Security</a>
+      <a href="api-reference.html" class="nav-link">API Reference</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="section">
+    <div class="feature-card">
+      <h2 class="text-2xl font-bold mb-4">Observability & Monitoring</h2>
+      <p>Advanced Echo Server provides comprehensive observability features including Prometheus metrics, structured logging, health checks, and monitoring endpoints. These tools enable effective monitoring, debugging, and performance analysis in production environments.</p>
+    </div>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Monitoring Architecture</h3>
+      <div class="feature-card">
+        <pre class="mermaid">
+graph TD
+    A[HTTP Requests] --> B[Request Middleware]
+    B --> C[Metrics Collection]
+    C --> D[Request Processing]
+    D --> E[Response Middleware]
+    E --> F[Metrics Update]
+    
+    G[Prometheus] --> H[/metrics Endpoint]
+    H --> I[Scrape Metrics]
+    
+    J[Logs] --> K[Structured Logging]
+    K --> L[Log Aggregation]
+    
+    M[Health Checks] --> N[/health Endpoint]
+    N --> O[System Status]
+    
+    P[Performance] --> Q[/debug/pprof]
+    Q --> R[Profile Analysis]
+    
+    style C fill:#e1f5fe
+    style F fill:#e8f5e8
+    style K fill:#fff3e0
+    style O fill:#f3e5f5
+</pre>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Prometheus Metrics</h3>
+      <div class="feature-card">
+        <p class="mb-4">The server exposes comprehensive metrics via the <code>/metrics</code> endpoint for Prometheus scraping:</p>
+        
+        <h4 class="font-semibold mb-2">Request Metrics</h4>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_requests_total</h5>
+            <p class="text-sm text-gray-600">Counter of total HTTP requests</p>
+            <code class="text-xs">Labels: method, path, status</code>
+          </div>
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_request_duration_seconds</h5>
+            <p class="text-sm text-gray-600">Histogram of request durations</p>
+            <code class="text-xs">Labels: method, path</code>
+          </div>
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_request_size_bytes</h5>
+            <p class="text-sm text-gray-600">Histogram of request body sizes</p>
+            <code class="text-xs">Labels: method, path</code>
+          </div>
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_response_size_bytes</h5>
+            <p class="text-sm text-gray-600">Histogram of response body sizes</p>
+            <code class="text-xs">Labels: method, path, status</code>
+          </div>
+        </div>
+
+        <h4 class="font-semibold mb-2 mt-4">Feature-Specific Metrics</h4>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_chaos_errors_total</h5>
+            <p class="text-sm text-gray-600">Counter of chaos-induced errors</p>
+            <code class="text-xs">Labels: error_code</code>
+          </div>
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_rate_limit_hits_total</h5>
+            <p class="text-sm text-gray-600">Counter of rate limit violations</p>
+            <code class="text-xs">Labels: limit_type</code>
+          </div>
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_websocket_connections</h5>
+            <p class="text-sm text-gray-600">Gauge of active WebSocket connections</p>
+            <code class="text-xs">No labels</code>
+          </div>
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_sse_connections</h5>
+            <p class="text-sm text-gray-600">Gauge of active SSE connections</p>
+            <code class="text-xs">No labels</code>
+          </div>
+        </div>
+
+        <h4 class="font-semibold mb-2 mt-4">System Metrics</h4>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_memory_usage_bytes</h5>
+            <p class="text-sm text-gray-600">Gauge of memory usage</p>
+            <code class="text-xs">Labels: type (heap, stack, gc)</code>
+          </div>
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_goroutines</h5>
+            <p class="text-sm text-gray-600">Gauge of active goroutines</p>
+            <code class="text-xs">No labels</code>
+          </div>
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_uptime_seconds</h5>
+            <p class="text-sm text-gray-600">Gauge of server uptime</p>
+            <code class="text-xs">No labels</code>
+          </div>
+          <div class="metric-card">
+            <h5 class="font-medium text-blue-600">echo_history_size</h5>
+            <p class="text-sm text-gray-600">Gauge of stored request history</p>
+            <code class="text-xs">No labels</code>
+          </div>
+        </div>
+
+        <h4 class="font-semibold mb-2 mt-4">Accessing Metrics</h4>
+        <pre><code># Scrape all metrics
+curl http://localhost:8080/metrics
+
+# Example Prometheus configuration
+scrape_configs:
+  - job_name: 'echo-server'
+    static_configs:
+      - targets: ['localhost:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 15s</code></pre>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Health Checks</h3>
+      <div class="feature-card">
+        <p class="mb-4">Multiple health check endpoints provide different levels of system status information:</p>
+        
+        <h4 class="font-semibold mb-2">Basic Health Check</h4>
+        <pre><code># Simple liveness check
+curl http://localhost:8080/health
+
+# Response
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "uptime": "1h30m45s"
+}</code></pre>
+
+        <h4 class="font-semibold mb-2 mt-4">Detailed Health Check</h4>
+        <pre><code># Comprehensive health status
+curl http://localhost:8080/health/detailed
+
+# Response
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "uptime": "1h30m45s",
+  "version": "1.0.0",
+  "build": "abc123",
+  "components": {
+    "memory": {
+      "status": "healthy",
+      "usage_mb": 45.2,
+      "limit_mb": 512
+    },
+    "goroutines": {
+      "status": "healthy",
+      "count": 23,
+      "limit": 1000
+    },
+    "connections": {
+      "status": "healthy",
+      "websocket": 5,
+      "sse": 12,
+      "http": 8
+    },
+    "storage": {
+      "status": "healthy",
+      "history_size": 89,
+      "history_limit": 100
+    }
+  }
+}</code></pre>
+
+        <h4 class="font-semibold mb-2 mt-4">Readiness Check</h4>
+        <pre><code># Kubernetes readiness probe
+curl http://localhost:8080/ready
+
+# Returns 200 if ready to serve traffic
+# Returns 503 if not ready (e.g., during startup)</code></pre>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Structured Logging</h3>
+      <div class="feature-card">
+        <p class="mb-4">Advanced Echo Server uses structured JSON logging with configurable levels and formats:</p>
+
+        <h4 class="font-semibold mb-2">Log Configuration</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Environment Variable</th>
+              <th>Description</th>
+              <th>Default</th>
+              <th>Options</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>LOG_LEVEL</code></td>
+              <td>Minimum log level</td>
+              <td><code>info</code></td>
+              <td>debug, info, warn, error</td>
+            </tr>
+            <tr>
+              <td><code>LOG_FORMAT</code></td>
+              <td>Log output format</td>
+              <td><code>json</code></td>
+              <td>json, text</td>
+            </tr>
+            <tr>
+              <td><code>LOG_REQUESTS</code></td>
+              <td>Log all HTTP requests</td>
+              <td><code>true</code></td>
+              <td>true, false</td>
+            </tr>
+            <tr>
+              <td><code>LOG_BODY</code></td>
+              <td>Include request/response bodies</td>
+              <td><code>false</code></td>
+              <td>true, false</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4 class="font-semibold mb-2 mt-4">Log Examples</h4>
+        <pre><code># Request log entry
+{
+  "level": "info",
+  "time": "2024-01-15T10:30:00Z",
+  "msg": "HTTP request",
+  "request_id": "req_1234567890",
+  "method": "POST",
+  "path": "/api/users",
+  "remote_addr": "192.168.1.100:12345",
+  "user_agent": "curl/7.68.0",
+  "content_length": 45,
+  "duration_ms": 23,
+  "status": 200,
+  "response_size": 89
+}
+
+# Error log entry
+{
+  "level": "error",
+  "time": "2024-01-15T10:31:00Z",
+  "msg": "Chaos error injected",
+  "request_id": "req_1234567891",
+  "error_code": 503,
+  "chaos_probability": 15,
+  "path": "/api/orders"
+}
+
+# System log entry
+{
+  "level": "warn",
+  "time": "2024-01-15T10:32:00Z",
+  "msg": "High memory usage detected",
+  "memory_mb": 450,
+  "limit_mb": 512,
+  "usage_percent": 87.9
+}</code></pre>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Performance Profiling</h3>
+      <div class="feature-card">
+        <p class="mb-4">Built-in Go profiling endpoints for performance analysis:</p>
+        
+        <h4 class="font-semibold mb-2">Available Profiles</h4>
+        <pre><code># CPU profile (30 seconds)
+curl http://localhost:8080/debug/pprof/profile?seconds=30 > cpu.prof
+
+# Memory heap profile
+curl http://localhost:8080/debug/pprof/heap > heap.prof
+
+# Memory allocation profile
+curl http://localhost:8080/debug/pprof/allocs > allocs.prof
+
+# Goroutine profile
+curl http://localhost:8080/debug/pprof/goroutine > goroutine.prof
+
+# Mutex contention profile
+curl http://localhost:8080/debug/pprof/mutex > mutex.prof
+
+# Block profile
+curl http://localhost:8080/debug/pprof/block > block.prof</code></pre>
+
+        <h4 class="font-semibold mb-2 mt-4">Analyzing Profiles</h4>
+        <pre><code># Install go tool pprof
+go install golang.org/x/tools/cmd/pprof
+
+# Analyze CPU profile
+go tool pprof cpu.prof
+
+# Web interface
+go tool pprof -http=:8081 cpu.prof
+
+# Memory analysis
+go tool pprof heap.prof
+
+# Compare profiles
+go tool pprof -base=old.prof new.prof</code></pre>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-xl font-semibold mb-4">Monitoring Best Practices</h3>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="feature-card">
+          <h4 class="font-semibold mb-2 text-blue-600">📊 Key Metrics to Monitor</h4>
+          <ul class="text-sm space-y-1">
+            <li>• Request rate and response time percentiles</li>
+            <li>• Error rates and status code distributions</li>
+            <li>• Memory usage and garbage collection patterns</li>
+            <li>• Active connection counts (HTTP, WebSocket, SSE)</li>
+            <li>• Rate limiting hit rates</li>
+            <li>• Chaos error injection rates</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <h4 class="font-semibold mb-2 text-blue-600">🚨 Alerting Thresholds</h4>
+          <ul class="text-sm space-y-1">
+            <li>• High error rates (>5% 5xx responses)</li>
+            <li>• Elevated response times (>95th percentile)</li>
+            <li>• Memory usage above 80% of limit</li>
+            <li>• High goroutine count (unusual growth)</li>
+            <li>• Connection count approaching limits</li>
+            <li>• Service unavailable for >30 seconds</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <h4 class="font-semibold mb-2 text-blue-600">📈 Dashboard Examples</h4>
+          <ul class="text-sm space-y-1">
+            <li>• Request rate and response time trends</li>
+            <li>• Error rate and status code breakdown</li>
+            <li>• Resource utilization (CPU, memory)</li>
+            <li>• Feature usage (chaos, delays, scenarios)</li>
+            <li>• Connection and session metrics</li>
+            <li>• Performance regression tracking</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <h4 class="font-semibold mb-2 text-blue-600">🔧 Troubleshooting</h4>
+          <ul class="text-sm space-y-1">
+            <li>• Correlate metrics with application logs</li>
+            <li>• Use request IDs for tracing</li>
+            <li>• Profile during high load periods</li>
+            <li>• Monitor resource usage patterns</li>
+            <li>• Track feature-specific behavior</li>
+            <li>• Analyze historical performance data</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="text-xl font-semibold mb-4">Sample Grafana Dashboard</h3>
+      <div class="feature-card">
+        <p class="mb-4">Example Prometheus queries for Grafana dashboards:</p>
+        
+        <pre><code># Request rate (requests per second)
+rate(echo_requests_total[5m])
+
+# Response time 95th percentile
+histogram_quantile(0.95, rate(echo_request_duration_seconds_bucket[5m]))
+
+# Error rate percentage
+(sum(rate(echo_requests_total{status=~"5.."}[5m])) / sum(rate(echo_requests_total[5m]))) * 100
+
+# Memory usage
+echo_memory_usage_bytes{type="heap"}
+
+# Active connections
+echo_websocket_connections + echo_sse_connections
+
+# Chaos error rate
+rate(echo_chaos_errors_total[5m])
+
+# Rate limit hit rate
+rate(echo_rate_limit_hits_total[5m])</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white text-center py-8">
+    <div class="section">
+      <p class="mb-2">Advanced Echo Server - Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300 hover:text-blue-200">MIT License</a></p>
+      <p class="text-sm text-gray-400">Built with Go • Dockerized • Production Ready</p>
+    </div>
+  </footer>
+
+  <!-- Initialize Mermaid -->
+  <script>
+    mermaid.initialize({ 
+      startOnLoad: true,
+      theme: 'default',
+      themeVariables: {
+        primaryColor: '#3b82f6',
+        primaryTextColor: '#1e40af',
+        primaryBorderColor: '#2563eb',
+        lineColor: '#6b7280',
+        secondaryColor: '#f3f4f6',
+        tertiaryColor: '#f9fafb'
+      }
+    });
+  </script>
+</body>
+</html>

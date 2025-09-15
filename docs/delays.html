@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delays - Advanced Echo Server</title>
+  <link rel="icon" type="image/x-icon" href="/docs/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .header-img { max-width: 200px; }
+    .section { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+    .mermaid { text-align: center; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <!-- Header -->
+  <header class="bg-blue-600 text-white text-center py-6">
+    <img src="/docs/aes.png" alt="Advanced Echo Server" class="header-img mx-auto mb-4">
+    <h1 class="text-4xl font-bold mt-4">Delays</h1>
+    <p class="text-lg mt-2">Simulate network latency with fine-grained control</p>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="bg-gray-800 text-white sticky top-0 shadow-md">
+    <div class="section flex flex-wrap justify-center space-x-4 py-4">
+      <a href="/docs/index.html" class="hover:text-blue-300">Home</a>
+      <a href="/docs/simple-echo.html" class="hover:text-blue-300">Simple Echo</a>
+      <a href="/docs/delays.html" class="font-bold hover:text-blue-300">Delays</a>
+      <a href="/docs/back-pressure.html" class="hover:text-blue-300">Back Pressure</a>
+      <a href="/docs/scenarios.html" class="hover:text-blue-300">Scenarios</a>
+      <a href="/docs/custom-responses.html" class="hover:text-blue-300">Custom Responses</a>
+      <a href="/docs/websockets.html" class="hover:text-blue-300">WebSockets</a>
+      <a href="/docs/sse.html" class="hover:text-blue-300">SSE</a>
+      <a href="/docs/history-replay.html" class="hover:text-blue-300">History & Replay</a>
+      <a href="/docs/observability.html" class="hover:text-blue-300">Observability</a>
+      <a href="/docs/security.html" class="hover:text-blue-300">Security</a>
+      <a href="/docs/api-reference.html" class="hover:text-blue-300">API Reference</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="section">
+    <h2 class="text-2xl font-bold mb-4">Delay Features</h2>
+    <p>Simulate network conditions with various delay patterns, controlled via HTTP headers or environment variables. Delays are capped at 300s to prevent hangs. Logs detail applied delays, and Prometheus metrics (<code>echo_request_duration_seconds</code>) track latency.</p>
+
+    <h3 class="text-xl font-semibold mt-4">Control Flow</h3>
+    <pre class="mermaid">
+      graph TD
+        A[Request] --> B{Check Headers/Env}
+        B -->|X-Echo-Delay| C[Simple Delay]
+        B -->|X-Echo-Jitter| D[Jitter Delay]
+        B -->|X-Echo-Random-Delay| E[Random Delay]
+        B -->|X-Echo-Exponential| F[Exponential Backoff]
+        B -->|X-Echo-Latency| G[Latency Injection]
+        C --> H[Apply Delay]
+        D --> H
+        E --> H
+        F --> H
+        G --> H
+        H --> I[Continue Processing]
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Simple Delay</h3>
+    <p>Applies a fixed delay in milliseconds.</p>
+    <ul class="list-disc ml-6">
+      <li><strong>Header</strong>: <code>X-Echo-Delay: 500ms</code></li>
+      <li><strong>Env</strong>: <code>ECHO_DELAY=100ms</code></li>
+      <li><strong>Example</strong>:</li>
+    </ul>
+    <pre>
+      <code>
+curl -H "X-Echo-Delay: 200ms" http://localhost:8080/ -d "test"
+# Logs: "Simple delay: 200ms"
+      </code>
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Jitter Delay</h3>
+    <p>Base delay ± random variance (ms).</p>
+    <ul class="list-disc ml-6">
+      <li><strong>Header</strong>: <code>X-Echo-Jitter: 100,50</code> (100ms ± 50ms)</li>
+      <li><strong>Env</strong>: <code>ECHO_JITTER=200,100</code></li>
+      <li><strong>Example</strong>: Delays ~150-250ms randomly</li>
+    </ul>
+    <pre>
+      <code>
+curl -H "X-Echo-Jitter: 100,50" http://localhost:8080/
+# Logs: "Jitter delay: 120ms (base: 100ms, jitter: 20ms)"
+      </code>
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Random Delay</h3>
+    <p>Uniform random delay in a range (ms).</p>
+    <ul class="list-disc ml-6">
+      <li><strong>Header</strong>: <code>X-Echo-Random-Delay: 100,500</code></li>
+      <li><strong>Env</strong>: <code>ECHO_RANDOM_DELAY=50,200</code></li>
+      <li><strong>Example</strong>:</li>
+    </ul>
+    <pre>
+      <code>
+curl -H "X-Echo-Random-Delay: 100,300" http://localhost:8080/
+# Logs: "Random delay: 150ms (range: 100-300)"
+      </code>
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Exponential Backoff</h3>
+    <p>Delay = base * 2^(attempt-1) + 25% jitter, for retry testing.</p>
+    <ul class="list-disc ml-6">
+      <li><strong>Header</strong>: <code>X-Echo-Exponential: 100,3</code> (~400ms + jitter)</li>
+      <li><strong>Env</strong>: <code>ECHO_EXPONENTIAL=50,2</code></li>
+      <li><strong>Example</strong>:</li>
+    </ul>
+    <pre>
+      <code>
+curl -H "X-Echo-Exponential: 100,3" http://localhost:8080/
+# Logs: "Exponential delay: 410ms (base: 100ms, attempt: 3)"
+      </code>
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Latency Injection</h3>
+    <p>Fixed or random latency (ms).</p>
+    <ul class="list-disc ml-6">
+      <li><strong>Header</strong>: <code>X-Echo-Latency: 100ms</code> or <code>100-200ms</code></li>
+      <li><strong>Env</strong>: <code>ECHO_LATENCY=50-150</code></li>
+      <li><strong>Example</strong>:</li>
+    </ul>
+    <pre>
+      <code>
+curl -H "X-Echo-Latency: 100-200ms" http://localhost:8080/
+# Logs: "Latency injection: 130ms (range: 100-200)"
+      </code>
+    </pre>
+
+    <h3 class="text-xl font-semibold mt-4">Notes</h3>
+    <ul class="list-disc ml-6">
+      <li>Only one delay type applies per request (first matched: Simple, Jitter, Random, Exponential, Latency).</li>
+      <li>Maximum delay: 300s to prevent abuse.</li>
+      <li>Logs show applied delay; check <code>/metrics</code> for <code>echo_request_duration_seconds</code> histogram.</li>
+    </ul>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white text-center py-6">
+    <p>Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300">MIT</a></p>
+  </footer>
+
+  <!-- Initialize Mermaid -->
+  <script>
+    mermaid.initialize({ startOnLoad: true });
+    document.querySelectorAll('nav a').forEach(anchor => {
+      anchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = anchor.getAttribute('href');
+      });
+    });
+  </script>
+</body>
+</html>
