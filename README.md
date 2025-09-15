@@ -9,7 +9,9 @@
 
 ## Overview
 
-Advanced Echo Server is a sophisticated testing tool that echoes back exactly what you send while providing extensive controls for simulating real-world conditions. Perfect for developers, DevOps engineers, and QA teams who need to test applications under various scenarios, including retry logic, circuit breakers, and distributed system failures.
+Advanced Echo Server is a sophisticated Go-based testing tool that echoes requests or returns fully custom responses while providing extensive controls for simulating real-world conditions. It’s ideal for developers, DevOps engineers, and QA teams who need to test applications under a variety of scenarios, including retry logic, circuit breakers, latency, chaos injection, and distributed system failures.
+
+With support for YAML-defined response sequences, request recording and replay, Prometheus metrics, WebSocket/SSE testing, and production-ready features like HTTP/2, TLS, CORS, and rate limiting, Advanced Echo Server provides a flexible environment for testing, debugging, and load-testing APIs.
 
 ### Key Benefits
 
