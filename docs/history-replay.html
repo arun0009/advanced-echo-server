@@ -24,7 +24,6 @@
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
-  <!-- Header -->
   <header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
     <div class="section text-center py-6">
       <img src="/advanced-echo-server/aes.png" alt="Advanced Echo Server" class="header-img mx-auto mb-4">
@@ -33,7 +32,6 @@
     </div>
   </header>
 
-  <!-- Navigation -->
   <nav class="bg-white border-b shadow-sm">
     <div class="section flex flex-wrap justify-center py-4">
       <a href="/advanced-echo-server/index.html" class="nav-link">🏠 Home</a>
@@ -46,12 +44,10 @@
       <a href="/advanced-echo-server/sse.html" class="nav-link">SSE</a>
       <a href="/advanced-echo-server/history-replay.html" class="nav-link active">History & Replay</a>
       <a href="/advanced-echo-server/observability.html" class="nav-link">Observability</a>
-      <a href="/advanced-echo-server/security.html" class="nav-link">Security</a>
       <a href="/advanced-echo-server/api-reference.html" class="nav-link">API Reference</a>
     </div>
   </nav>
 
-  <!-- Main Content -->
   <main class="section">
     <div class="feature-card">
       <h2 class="text-2xl font-bold mb-4">Request History & Replay</h2>
@@ -139,47 +135,61 @@ graph TD
 curl http://localhost:8080/history
 
 # Response format:
-{
-  "requests": [
-    {
-      "id": "req_1234567890",
-      "timestamp": "2024-01-15T10:30:00Z",
-      "method": "POST",
-      "path": "/api/users",
-      "headers": {
-        "Content-Type": "application/json",
-        "User-Agent": "curl/7.68.0"
-      },
-      "body": "{\"name\": \"John Doe\"}",
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/json",
-          "X-Request-ID": "req_1234567890"
-        },
-        "body": "{\"name\": \"John Doe\"}",
-        "duration_ms": 45
-      }
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "per_page": 50
-}</code></pre>
+[
+  {
+    "id": "ab2a11b7d4cfc1c9",
+    "timestamp": "2025-09-14T22:53:09.617551-07:00",
+    "method": "POST",
+    "url": "/api/login",
+    "headers": {
+      "Accept": [
+        "*/*"
+      ],
+      "Content-Length": [
+        "35"
+      ],
+      "Content-Type": [
+        "application/json"
+      ],
+      "User-Agent": [
+        "curl/8.7.1"
+      ],
+      "X-Request-Id": [
+        "ab2a11b7d4cfc1c9"
+      ]
+    },
+    "body": "eyJ1c2VybmFtZSI6Inh5eiIsInBhc3N3b3JkIjoieHl6In0="
+  },
+  {
+    "id": "ab2a11b7d4cfc1c9",
+    "timestamp": "2025-09-14T22:53:36.7286-07:00",
+    "method": "POST",
+    "url": "/api/login",
+    "headers": {
+      "Accept": [
+        "*/*"
+      ],
+      "Accept-Encoding": [
+        "gzip"
+      ],
+      "Content-Length": [
+        "35"
+      ],
+      "Content-Type": [
+        "application/json"
+      ],
+      "User-Agent": [
+        "curl/8.7.1"
+      ],
+      "X-Request-Id": [
+        "ab2a11b7d4cfc1c9"
+      ]
+    },
+    "body": "eyJ1c2VybmFtZSI6Inh5eiIsInBhc3N3b3JkIjoieHl6In0="
+  }
+]</code></pre>
 
-        <h4 class="font-semibold mb-2 mt-4">Filtering and Pagination</h4>
-        <pre><code># Filter by method and path
-curl "http://localhost:8080/history?method=POST&path=/api/users"
-
-# Pagination
-curl "http://localhost:8080/history?page=2&per_page=25"
-
-# Filter by time range
-curl "http://localhost:8080/history?since=2024-01-15T00:00:00Z&until=2024-01-15T23:59:59Z"
-
-# Search by request ID
-curl "http://localhost:8080/history?request_id=req_1234567890"</code></pre>
-      </div>
+   </div>
     </section>
 
     <section class="mb-8">
@@ -188,119 +198,25 @@ curl "http://localhost:8080/history?request_id=req_1234567890"</code></pre>
         <p class="mb-4">Replay previous requests to test behavior changes or debug issues:</p>
         
         <h4 class="font-semibold mb-2">Replay by Request ID</h4>
-        <pre><code># Replay a specific request
-curl -X POST http://localhost:8080/replay/req_1234567890
-
-# Response includes both original and new response
-{
-  "original_request": {
-    "id": "req_1234567890",
-    "method": "POST",
-    "path": "/api/users",
-    "body": "{\"name\": \"John Doe\"}"
-  },
-  "original_response": {
-    "status": 200,
-    "body": "{\"name\": \"John Doe\"}",
-    "duration_ms": 45
-  },
-  "replay_response": {
-    "status": 200,
-    "body": "{\"name\": \"John Doe\"}",
-    "duration_ms": 52,
-    "replayed_at": "2024-01-15T11:00:00Z"
-  }
-}</code></pre>
-
-        <h4 class="font-semibold mb-2 mt-4">Batch Replay</h4>
-        <pre><code># Replay multiple requests
-curl -X POST http://localhost:8080/replay/batch \
+        <p class="mb-4">Replay a specific request by providing its ID in the JSON body. The server will re-execute the original request and return the new response. The response format is the same as a standard echo response.</p>
+        <pre><code># Replay a specific request by providing its ID in the JSON body
+curl -X POST http://localhost:8080/replay \
   -H "Content-Type: application/json" \
-  -d '{
-    "request_ids": ["req_1234567890", "req_1234567891"],
-    "parallel": true,
-    "include_original": false
-  }'</code></pre>
+  -d '{"id": "req_1234567890"}'</code></pre>
 
         <h4 class="font-semibold mb-2 mt-4">Replay with Modifications</h4>
         <pre><code># Replay with header modifications
-curl -X POST http://localhost:8080/replay/req_1234567890 \
+curl -X POST http://localhost:8080/replay \
   -H "Content-Type: application/json" \
   -d '{
+    "id": "req_1234567890",
     "modify_headers": {
       "X-Test-Environment": "staging",
       "Authorization": "Bearer new-token"
     },
     "modify_body": "{\"name\": \"Jane Doe\"}",
-    "target_endpoint": "http://staging.example.com"
+    "target": "http://staging.example.com"
   }'</code></pre>
-      </div>
-    </section>
-
-    <section class="mb-8">
-      <h3 class="text-xl font-semibold mb-4">History Management</h3>
-      <div class="feature-card">
-        <h4 class="font-semibold mb-2">Clear History</h4>
-        <pre><code># Clear all stored requests
-curl -X DELETE http://localhost:8080/history
-
-# Clear requests older than specified time
-curl -X DELETE "http://localhost:8080/history?older_than=2024-01-14T00:00:00Z"
-
-# Clear requests matching criteria
-curl -X DELETE "http://localhost:8080/history?method=GET&path=/health"</code></pre>
-
-        <h4 class="font-semibold mb-2 mt-4">Export History</h4>
-        <pre><code># Export history as JSON
-curl http://localhost:8080/history/export > requests.json
-
-# Export specific time range
-curl "http://localhost:8080/history/export?since=2024-01-15T00:00:00Z" > recent_requests.json
-
-# Export as CSV for analysis
-curl -H "Accept: text/csv" http://localhost:8080/history/export > requests.csv</code></pre>
-      </div>
-    </section>
-
-    <section class="mb-8">
-      <h3 class="text-xl font-semibold mb-4">Use Cases</h3>
-      <div class="grid md:grid-cols-2 gap-6">
-        <div class="feature-card">
-          <h4 class="font-semibold mb-2 text-blue-600">🐛 Debugging</h4>
-          <ul class="text-sm space-y-1">
-            <li>• Inspect failed requests and responses</li>
-            <li>• Compare behavior before/after changes</li>
-            <li>• Trace request patterns and timing</li>
-            <li>• Identify problematic request sequences</li>
-          </ul>
-        </div>
-        <div class="feature-card">
-          <h4 class="font-semibold mb-2 text-blue-600">🧪 Testing</h4>
-          <ul class="text-sm space-y-1">
-            <li>• Replay production requests in staging</li>
-            <li>• Test API changes with real data</li>
-            <li>• Validate response consistency</li>
-            <li>• Performance regression testing</li>
-          </ul>
-        </div>
-        <div class="feature-card">
-          <h4 class="font-semibold mb-2 text-blue-600">📊 Analysis</h4>
-          <ul class="text-sm space-y-1">
-            <li>• Monitor request patterns over time</li>
-            <li>• Analyze response time distributions</li>
-            <li>• Track error rates and patterns</li>
-            <li>• Generate usage reports</li>
-          </ul>
-        </div>
-        <div class="feature-card">
-          <h4 class="font-semibold mb-2 text-blue-600">🔄 Load Testing</h4>
-          <ul class="text-sm space-y-1">
-            <li>• Replay requests at higher rates</li>
-            <li>• Generate realistic traffic patterns</li>
-            <li>• Test with production-like data</li>
-            <li>• Stress test specific endpoints</li>
-          </ul>
-        </div>
       </div>
     </section>
 
@@ -312,8 +228,7 @@ curl -H "Accept: text/csv" http://localhost:8080/history/export > requests.csv</
           <ul class="text-blue-700 text-sm space-y-1">
             <li>• Set appropriate history size limits based on memory constraints</li>
             <li>• Disable body storage for high-volume endpoints if not needed</li>
-            <li>• Use time-based filtering to focus on relevant requests</li>
-            <li>• Regular cleanup of old history to prevent memory issues</li>
+            <li>• The history is in-memory and currently has no cleanup or filtering capabilities.</li>
           </ul>
         </div>
         
@@ -321,9 +236,8 @@ curl -H "Accept: text/csv" http://localhost:8080/history/export > requests.csv</
           <h4 class="font-semibold text-amber-800 mb-2">⚠️ Security Considerations</h4>
           <ul class="text-amber-700 text-sm space-y-1">
             <li>• Be cautious with storing sensitive data in request bodies</li>
-            <li>• Consider disabling history for authentication endpoints</li>
-            <li>• Implement proper access controls for history endpoints</li>
-            <li>• Regularly purge history containing sensitive information</li>
+            <li>• Consider disabling history for authentication endpoints using the `X-Echo-History-Enabled: false` header.</li>
+            <li>• The `advanced-echo-server` does not have built-in access controls.</li>
           </ul>
         </div>
 
@@ -340,7 +254,6 @@ curl -H "Accept: text/csv" http://localhost:8080/history/export > requests.csv</
     </section>
   </main>
 
-  <!-- Footer -->
   <footer class="bg-gray-800 text-white text-center py-8">
     <div class="section">
       <p class="mb-2">Advanced Echo Server - Licensed under <a href="https://opensource.org/licenses/MIT" class="text-blue-300 hover:text-blue-200">MIT License</a></p>
@@ -348,7 +261,6 @@ curl -H "Accept: text/csv" http://localhost:8080/history/export > requests.csv</
     </div>
   </footer>
 
-  <!-- Initialize Mermaid -->
   <script>
     mermaid.initialize({ 
       startOnLoad: true,

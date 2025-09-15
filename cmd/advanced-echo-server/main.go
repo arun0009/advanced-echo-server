@@ -1004,40 +1004,42 @@ func replayHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Target != "" {
-		client := &http.Client{Timeout: 30 * time.Second}
-		httpReq, err := http.NewRequest(record.Method, req.Target, bytes.NewReader(record.Body))
-		if err != nil {
-			http.Error(w, "Failed to create request: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		httpReq.Header = record.Headers.Clone()
-		resp, err := client.Do(httpReq)
-		if err != nil {
-			http.Error(w, "Replay failed: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			http.Error(w, "Failed to read response body: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  resp.StatusCode,
-			"body":    string(body),
-			"headers": resp.Header,
-		})
-	} else {
-		contentType := record.Headers.Get("Content-Type")
-		if contentType == "" {
-			contentType = "application/octet-stream"
-		}
-		w.Header().Set("Content-Type", contentType)
-		w.WriteHeader(http.StatusOK)
-		w.Write(record.Body)
+	// Use the host and scheme from the incoming request to create a dynamic URL.
+	schema := "http"
+	if r.TLS != nil {
+		schema = "https"
 	}
+	r.URL.Scheme = schema
+	targetURL := req.Target
+	if targetURL == "" {
+		targetURL = fmt.Sprintf("%s://%s%s", r.URL.Scheme, r.Host, record.URL)
+	}
+
+	// Create and execute a new HTTP request based on the stored record.
+	client := &http.Client{Timeout: 30 * time.Second}
+	httpReq, err := http.NewRequest(record.Method, targetURL, bytes.NewReader(record.Body))
+	if err != nil {
+		http.Error(w, "Failed to create request: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httpReq.Header = record.Headers.Clone()
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		http.Error(w, "Replay failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	replayBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to read replay response body: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(replayBody)
 }
 
 // Scenario handler

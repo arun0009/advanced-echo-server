@@ -356,52 +356,77 @@ func TestHistoryAndReplayHandler(t *testing.T) {
 	config.HistorySize = 10
 	configLock.Unlock()
 
-	req, err := http.NewRequest("POST", "/test", strings.NewReader(`{"test": "record"}`))
+	router := setupRoutes()
+
+	// Start a single in-process test server. This is the only way to get a valid URL for replay.
+	testServer := httptest.NewServer(router)
+	defer testServer.Close()
+
+	client := &http.Client{}
+
+	// --- Step 1: Make the original request to record it in history
+	req, err := http.NewRequest("POST", testServer.URL+"/test", strings.NewReader(`{"test": "record"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	req.Header.Set("X-Request-ID", "test123")
 	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-	router := setupRoutes()
-	router.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Initial request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if status := resp.StatusCode; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	req, err = http.NewRequest("GET", "/history", nil)
+	// --- Step 2: Verify history contains the recorded request
+	req, err = http.NewRequest("GET", testServer.URL+"/history", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	rr = httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("History request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if status := resp.StatusCode; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 	var history []RequestRecord
-	if err := json.Unmarshal(rr.Body.Bytes(), &history); err != nil {
+	body, _ := io.ReadAll(resp.Body)
+	if err := json.Unmarshal(body, &history); err != nil {
 		t.Fatal("Failed to parse history:", err)
 	}
 	if len(history) != 1 || history[0].ID != "test123" || string(history[0].Body) != `{"test": "record"}` {
 		t.Errorf("history incorrect: got ID=%v, Body=%q; want ID=test123, Body={\"test\": \"record\"}", history[0].ID, string(history[0].Body))
 	}
 
+	// --- Step 3: Replay the request to the live test server
 	replayData := `{"id": "test123"}`
-	req, err = http.NewRequest("POST", "/replay", strings.NewReader(replayData))
+	req, err = http.NewRequest("POST", testServer.URL+"/replay", strings.NewReader(replayData))
 	if err != nil {
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	rr = httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Replay request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if status := resp.StatusCode; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
-	if body := rr.Body.String(); body != `{"test": "record"}` {
-		t.Errorf("replay returned unexpected body: got %q, want '{\"test\": \"record\"}'", body)
+
+	body, _ = io.ReadAll(resp.Body)
+	if string(body) != `{"test": "record"}` {
+		t.Errorf("replay returned unexpected body: got %q, want '{\"test\": \"record\"}'", string(body))
 	}
 }
 
