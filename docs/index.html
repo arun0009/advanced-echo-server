@@ -41,6 +41,7 @@
         <a href="/advanced-echo-server/sse.html" class="hover:text-white">SSE</a>
         <a href="/advanced-echo-server/history-replay.html" class="hover:text-white">History & Replay</a>
         <a href="/advanced-echo-server/observability.html" class="hover:text-white">Observability</a>
+        <a href="/advanced-echo-server/security.html" class="hover:text-white">Security &amp; Protocols</a>
         <a href="/advanced-echo-server/api-reference.html" class="hover:text-white">API Reference</a>
       </div>
     </nav>
@@ -71,7 +72,7 @@ docker pull arun0009/advanced-echo-server:latest
 docker run -p 8080:8080 arun0009/advanced-echo-server:latest
 
 # Test basic echo
-curl -X POST http://localhost:8080/echo \
+curl -X POST http://localhost:8080/ \
   -H "Content-Type: application/json" \
   -d '{"test": "hello"}'</code></pre>
 
@@ -127,9 +128,27 @@ services:
             </tr>
             <tr class="even:bg-gray-50">
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">ECHO_CHAOS</code></td>
-              <td class="px-3 py-2 align-top">Random failure %</td>
+              <td class="px-3 py-2 align-top">Random failure % (0-100)</td>
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">""</code></td>
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">15</code></td>
+            </tr>
+            <tr class="even:bg-gray-50">
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">ECHO_RATE_LIMIT_RPS</code></td>
+              <td class="px-3 py-2 align-top">Global rate limit (RPS), 0 disables</td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">0</code></td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">10</code></td>
+            </tr>
+            <tr class="even:bg-gray-50">
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">ECHO_RATE_LIMIT_BURST</code></td>
+              <td class="px-3 py-2 align-top">Burst size for rate limiter</td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">0</code></td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">20</code></td>
+            </tr>
+            <tr class="even:bg-gray-50">
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">ECHO_SSE_TICKER</code></td>
+              <td class="px-3 py-2 align-top">SSE event interval (duration)</td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">5s</code></td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">500ms</code></td>
             </tr>
             <tr class="even:bg-gray-50">
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">ECHO_HISTORY_SIZE</code></td>

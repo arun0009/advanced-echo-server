@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Security & Protocols: TLS/HTTPS, CORS, and HTTP/2 (H2C) for Advanced Echo Server." />
+  <title>Security & Protocols - Advanced Echo Server</title>
+  <link rel="icon" type="image/x-icon" href="/advanced-echo-server/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ["Inter","ui-sans-serif","system-ui","-apple-system","Segoe UI","Roboto","Helvetica Neue","Arial","Noto Sans","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"] } } }
+    }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
+      <img src="/advanced-echo-server/aes.png" alt="Advanced Echo Server Logo" class="w-10 h-10 rounded" />
+      <div>
+        <h1 class="text-xl font-semibold text-gray-900">Advanced Echo Server</h1>
+        <p class="text-sm text-gray-600">Go-powered testing, load simulation & chaos engineering</p>
+      </div>
+    </div>
+    <!-- Navigation -->
+    <nav class="bg-gray-800 text-gray-200 text-sm shadow-sm" role="navigation" aria-label="Primary">
+      <div class="max-w-6xl mx-auto px-4 flex flex-wrap justify-center gap-x-4 gap-y-2 py-2">
+        <a href="/advanced-echo-server/index.html" class="hover:text-white">Home</a>
+        <a href="/advanced-echo-server/simple-echo.html" class="hover:text-white">Simple Echo</a>
+        <a href="/advanced-echo-server/delays.html" class="hover:text-white">Delays</a>
+        <a href="/advanced-echo-server/back-pressure.html" class="hover:text-white">Back Pressure</a>
+        <a href="/advanced-echo-server/scenarios.html" class="hover:text-white">Scenarios</a>
+        <a href="/advanced-echo-server/custom-responses.html" class="hover:text-white">Custom Responses</a>
+        <a href="/advanced-echo-server/websockets.html" class="hover:text-white">WebSockets</a>
+        <a href="/advanced-echo-server/sse.html" class="hover:text-white">SSE</a>
+        <a href="/advanced-echo-server/history-replay.html" class="hover:text-white">History & Replay</a>
+        <a href="/advanced-echo-server/observability.html" class="hover:text-white">Observability</a>
+        <a href="/advanced-echo-server/security.html" aria-current="page" class="text-white font-medium">Security &amp; Protocols</a>
+        <a href="/advanced-echo-server/api-reference.html" class="hover:text-white">API Reference</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-4xl mx-auto px-4 py-8">
+    <section class="mb-10">
+      <h2 class="text-lg font-semibold mb-3">Security &amp; Protocols</h2>
+      <p class="text-sm text-gray-700">Configure HTTPS (TLS), Cross-Origin Resource Sharing (CORS), and HTTP/2 (including H2C) behavior for the server.</p>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-base font-medium mb-2">TLS / HTTPS</h3>
+      <div class="bg-white p-4 rounded-md ring-1 ring-gray-200 space-y-4">
+        <p class="text-sm text-gray-700">Enable TLS to serve HTTPS directly. When enabled, a self-signed certificate may be generated if none is provided.</p>
+        <div class="w-full overflow-x-auto">
+          <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+            <thead>
+              <tr class="bg-gray-50 text-left">
+                <th class="border-b border-gray-200 px-3 py-2">Variable</th>
+                <th class="border-b border-gray-200 px-3 py-2">Description</th>
+                <th class="border-b border-gray-200 px-3 py-2">Default</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">ENABLE_TLS</code></td><td class="px-3 py-2">Enable HTTPS listener</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">false</code></td></tr>
+              <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">CERT_FILE</code></td><td class="px-3 py-2">Path to TLS certificate (PEM)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">server.crt</code></td></tr>
+              <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">KEY_FILE</code></td><td class="px-3 py-2">Path to TLS private key (PEM)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">server.key</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code># Run with TLS (self-signed or provided certs)
+ENABLE_TLS=true CERT_FILE=/path/to/server.crt KEY_FILE=/path/to/server.key \
+  ./advanced-echo-server
+
+# Test HTTPS (ignore self-signed in curl)
+curl -k https://localhost:8080/health</code></pre>
+        <div class="space-y-3">
+          <h4 class="font-medium text-sm">Generate Self-Signed Certificates</h4>
+          <div class="bg-gray-50 border border-gray-200 rounded p-3">
+            <p class="text-sm text-gray-700 mb-2"><span class="font-medium">Option A — OpenSSL (PEM)</span></p>
+            <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code># 1) Create a private key
+openssl genrsa -out server.key 2048
+
+# 2) Create a certificate signing request (CSR)
+openssl req -new -key server.key -out server.csr \
+  -subj "/C=US/ST=CA/L=Local/O=Dev/OU=Echo/CN=localhost"
+
+# 3) Self-sign the certificate (valid 365 days) with SAN for localhost
+cat &gt;san.cnf &lt;&lt;'EOF'
+subjectAltName=DNS:localhost,IP:127.0.0.1,IP:::1
+EOF
+openssl x509 -req -in server.csr -signkey server.key -out server.crt \
+  -days 365 -extfile san.cnf -extensions SAN
+
+# Verify
+openssl x509 -in server.crt -text -noout | sed -n '1,20p'
+</code></pre>
+          </div>
+          <div class="bg-gray-50 border border-gray-200 rounded p-3">
+            <p class="text-sm text-gray-700 mb-2"><span class="font-medium">Minimal OpenSSL SAN config</span></p>
+            <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code># Create a minimal openssl.cnf with SAN section
+cat &gt;openssl-san.cnf &lt;&lt;'EOF'
+[ req ]
+default_bits       = 2048
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+prompt             = no
+
+[ req_distinguished_name ]
+C  = US
+ST = CA
+L  = Local
+O  = Dev
+OU = Echo
+CN = localhost
+
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = localhost
+IP.1  = 127.0.0.1
+IP.2  = ::1
+EOF
+
+# Generate key and self-signed cert using the config
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout server.key -out server.crt -config openssl-san.cnf -extensions v3_req
+</code></pre>
+          </div>
+          <div class="bg-gray-50 border border-gray-200 rounded p-3">
+            <p class="text-sm text-gray-700 mb-2"><span class="font-medium">Option B — mkcert (trusted locally)</span></p>
+            <p class="text-xs text-gray-600 mb-2">mkcert installs a local CA and generates certs trusted by your system/browser. See mkcert docs for install instructions.</p>
+            <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code># Install mkcert (macOS example)
+brew install mkcert nss  # nss for Firefox trust
+mkcert -install
+
+# Generate certs for localhost
+mkcert localhost 127.0.0.1 ::1
+# Outputs files like: localhost+2.pem, localhost+2-key.pem
+
+# Use with server
+ENABLE_TLS=true CERT_FILE=./localhost+2.pem KEY_FILE=./localhost+2-key.pem \
+  ./advanced-echo-server
+</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-base font-medium mb-2">CORS</h3>
+      <div class="bg-white p-4 rounded-md ring-1 ring-gray-200 space-y-4">
+        <p class="text-sm text-gray-700">CORS allows browsers to make cross-origin requests during local testing and demos.</p>
+        <div class="w-full overflow-x-auto">
+          <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+            <thead>
+              <tr class="bg-gray-50 text-left">
+                <th class="border-b border-gray-200 px-3 py-2">Variable</th>
+                <th class="border-b border-gray-200 px-3 py-2">Description</th>
+                <th class="border-b border-gray-200 px-3 py-2">Default</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">ENABLE_CORS</code></td><td class="px-3 py-2">Enable permissive CORS: * origin, methods, headers</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">true</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code># Preflight
+curl -i -X OPTIONS http://localhost:8080/ \
+  -H "Origin: https://example.com" \
+  -H "Access-Control-Request-Method: POST"
+
+# Actual request
+curl -i http://localhost:8080/ \
+  -H "Origin: https://example.com"</code></pre>
+        <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">Note: In production, place a reverse proxy (e.g., NGINX/Envoy) in front to enforce stricter CORS and TLS policies.</p>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h3 class="text-base font-medium mb-2">HTTP/2 and H2C</h3>
+      <div class="bg-white p-4 rounded-md ring-1 ring-gray-200 space-y-4">
+        <p class="text-sm text-gray-700">The server supports HTTP/2. When TLS is off, it upgrades handlers using H2C (cleartext HTTP/2) for local testing.</p>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code># Example: test H2C with curl (uses HTTP/1.1 by default)
+curl -v http://localhost:8080/health
+
+# Example: test HTTP/2 over TLS
+curl -vk https://localhost:8080/ready</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-100 text-gray-600 text-center py-4 text-sm border-t border-gray-200">
+    <p>
+      Advanced Echo Server •
+      <a href="https://opensource.org/licenses/MIT" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">MIT License</a>
+    </p>
+  </footer>
+</body>
+</html>

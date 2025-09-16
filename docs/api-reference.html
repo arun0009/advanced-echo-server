@@ -39,6 +39,7 @@
         <a href="/advanced-echo-server/sse.html" class="hover:text-white">SSE</a>
         <a href="/advanced-echo-server/history-replay.html" class="hover:text-white">History & Replay</a>
         <a href="/advanced-echo-server/observability.html" class="hover:text-white">Observability</a>
+        <a href="/advanced-echo-server/security.html" class="hover:text-white">Security &amp; Protocols</a>
         <a href="/advanced-echo-server/api-reference.html" aria-current="page" class="text-white font-medium">API Reference</a>
       </div>
     </nav>
@@ -52,9 +53,20 @@
         <div class="border-l-4 border-blue-500 pl-3">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">GET</span>
-            <span class="font-mono text-sm">/ or /echo</span>
+            <span class="font-mono text-sm">/ (any path not matching special routes)</span>
           </div>
           <p class="text-sm text-gray-700">Basic echo endpoint - returns request info for GET, mirrors body for other methods.</p>
+          <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code># GET shows request info (text/plain)
+curl http://localhost:8080/
+# GET / HTTP/1.1
+# Host: localhost:8080
+# ...
+
+# POST mirrors body (content type preserved unless overridden)
+curl -X POST http://localhost:8080/ \
+  -H "Content-Type: application/json" \
+  -d '{"hello":"world"}'
+# {"hello":"world"}</code></pre>
         </div>
         <div class="border-l-4 border-blue-500 pl-3">
           <div class="flex items-center gap-2 mb-1">
@@ -62,6 +74,31 @@
             <span class="font-mono text-sm">/health</span>
           </div>
           <p class="text-sm text-gray-700">Health check endpoint - returns server status and basic metrics.</p>
+          <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl http://localhost:8080/health
+# {"status":"healthy","timestamp":"2025-01-01T00:00:00Z","uptime":"..."}</code></pre>
+        </div>
+        <div class="border-l-4 border-blue-500 pl-3">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">GET</span>
+            <span class="font-mono text-sm">/ready</span>
+          </div>
+          <p class="text-sm text-gray-700">Readiness probe endpoint - returns readiness status (200 OK when ready).</p>
+          <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl http://localhost:8080/ready
+# {"status":"ready"}</code></pre>
+        </div>
+        <div class="border-l-4 border-blue-500 pl-3">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">GET</span>
+            <span class="font-mono text-sm">/info</span>
+          </div>
+          <p class="text-sm text-gray-700">Server info endpoint - returns request details and server metadata (hostname, version, uptime, request_id).</p>
+          <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl http://localhost:8080/info
+# {
+#   "method": "GET",
+#   "path": "/info",
+#   "remote_addr": "127.0.0.1",
+#   "server": {"hostname": "...", "version": "1.0.0", "uptime": "..."}
+# }</code></pre>
         </div>
         <div class="border-l-4 border-blue-500 pl-3">
           <div class="flex items-center gap-2 mb-1">
@@ -69,20 +106,29 @@
             <span class="font-mono text-sm">/metrics</span>
           </div>
           <p class="text-sm text-gray-700">Prometheus metrics endpoint - returns all collected metrics.</p>
+          <ul class="list-disc ml-6 text-xs text-gray-600">
+            <li><code class="bg-gray-100 px-1 rounded">echo_requests_total{method,path,status}</code></li>
+            <li><code class="bg-gray-100 px-1 rounded">echo_request_duration_seconds</code></li>
+            <li><code class="bg-gray-100 px-1 rounded">echo_chaos_errors_total{type}</code></li>
+          </ul>
+          <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl http://localhost:8080/metrics | head -n 10
+# HELP echo_requests_total Total number of requests processed
+# TYPE echo_requests_total counter
+# echo_requests_total{method="GET",path="/",status="200"} 42</code></pre>
         </div>
         <div class="border-l-4 border-blue-500 pl-3">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">GET</span>
             <span class="font-mono text-sm">/ws</span>
           </div>
-          <p class="text-sm text-gray-700">WebSocket upgrade endpoint - establishes WebSocket connection for real-time communication.</p>
+          <p class="text-sm text-gray-700">WebSocket upgrade endpoint - establishes WebSocket connection for real-time communication. UI at <code class="bg-gray-100 px-1 rounded">/web-ws</code>.</p>
         </div>
         <div class="border-l-4 border-blue-500 pl-3">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">GET</span>
             <span class="font-mono text-sm">/sse</span>
           </div>
-          <p class="text-sm text-gray-700">Server-Sent Events endpoint - streams JSON events to connected clients.</p>
+          <p class="text-sm text-gray-700">Server-Sent Events endpoint - streams JSON events to connected clients. UI at <code class="bg-gray-100 px-1 rounded">/web-sse</code>. Interval controlled by <code class="bg-gray-100 px-1 rounded">ECHO_SSE_TICKER</code>.</p>
         </div>
       </div>
     </section>
@@ -116,6 +162,8 @@
             <span class="font-mono text-sm">/scenario</span>
           </div>
           <p class="text-sm text-gray-700">Get current scenarios configuration.</p>
+          <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl http://localhost:8080/scenario
+# Output: [{"path": "/test", "responses": [{"status": 200, "delay": "100ms", "body": "OK"}]}]</code></pre>
         </div>
         <div class="border-l-4 border-emerald-500 pl-3">
           <div class="flex items-center gap-2 mb-1">
@@ -123,6 +171,10 @@
             <span class="font-mono text-sm">/scenario</span>
           </div>
           <p class="text-sm text-gray-700">Update scenarios configuration with JSON array.</p>
+          <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -X POST http://localhost:8080/scenario \
+  -H "Content-Type: application/json" \
+  -d '[{"path": "/test", "responses": [{"status": 200, "delay": "100ms"}, {"status": 500}]}]'
+# Response: {"status": "scenarios updated"}</code></pre>
         </div>
       </div>
     </section>
@@ -139,11 +191,20 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Delay</code></td><td class="px-3 py-2">Add simple delay</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">500ms</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Delay</code></td><td class="px-3 py-2">Add simple delay (ms)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">500ms</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Jitter</code></td><td class="px-3 py-2">Base ± jitter (ms, base,jitter)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">100,50</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Random-Delay</code></td><td class="px-3 py-2">Random delay in range (ms,min,max)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">100,500</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Exponential</code></td><td class="px-3 py-2">Exponential backoff (base_ms,attempt)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">100,3</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Latency</code></td><td class="px-3 py-2">Latency injection (fixed or min-max)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">100ms</code> or <code class="bg-gray-100 px-1 rounded">100-200ms</code></td></tr>
             <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Status</code></td><td class="px-3 py-2">Set response status</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">201</code></td></tr>
-            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Chaos</code></td><td class="px-3 py-2">Random error percentage</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">15</code></td></tr>
-            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Response-Size</code></td><td class="px-3 py-2">Set response size</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">1024</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Error</code></td><td class="px-3 py-2">Simulate specific error</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">timeout</code>, <code class="bg-gray-100 px-1 rounded">503</code>, <code class="bg-gray-100 px-1 rounded">random</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Chaos</code></td><td class="px-3 py-2">Random error percentage (0-100)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">15</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Response-Size</code></td><td class="px-3 py-2">Set response size in bytes (random data)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">1024</code></td></tr>
             <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Compress</code></td><td class="px-3 py-2">Enable compression</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">gzip</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Content-Type</code></td><td class="px-3 py-2">Override response Content-Type</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">application/xml</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Set-Header-*</code></td><td class="px-3 py-2">Set arbitrary response header (dash-cased)</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Set-Header-X-App-Version: 1.2.3</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Headers</code></td><td class="px-3 py-2">Echo listed request headers back as X-Echoed-*</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Correlation-ID</code></td></tr>
+            <tr class="even:bg-gray-50"><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">X-Echo-Server-Info</code></td><td class="px-3 py-2">Include server info headers</td><td class="px-3 py-2"><code class="bg-gray-100 px-1 rounded">true</code></td></tr>
           </tbody>
         </table>
       </div>

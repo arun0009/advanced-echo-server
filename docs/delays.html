@@ -40,6 +40,7 @@
         <a href="/advanced-echo-server/sse.html" class="hover:text-white">SSE</a>
         <a href="/advanced-echo-server/history-replay.html" class="hover:text-white">History & Replay</a>
         <a href="/advanced-echo-server/observability.html" class="hover:text-white">Observability</a>
+        <a href="/advanced-echo-server/security.html" class="hover:text-white">Security &amp; Protocols</a>
         <a href="/advanced-echo-server/api-reference.html" class="hover:text-white">API Reference</a>
       </div>
     </nav>
@@ -70,6 +71,7 @@
     <ul class="list-disc ml-6 text-sm">
       <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Delay: 500ms</code></li>
       <li><strong>Env</strong>: <code class="bg-gray-100 px-1 rounded">ECHO_DELAY=100ms</code></li>
+      <li><strong>Max</strong>: 300000ms (300s)</li>
       <li><strong>Example</strong>:</li>
     </ul>
     <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Delay: 200ms" http://localhost:8080/ -d "test"
@@ -80,6 +82,7 @@
     <ul class="list-disc ml-6 text-sm">
       <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Jitter: 100,50</code> (100ms ± 50ms)</li>
       <li><strong>Env</strong>: <code class="bg-gray-100 px-1 rounded">ECHO_JITTER=200,100</code></li>
+      <li><strong>Bounds</strong>: Delay clamped to 0–300000ms</li>
       <li><strong>Example</strong>: Delays ~150-250ms randomly</li>
     </ul>
     <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Jitter: 100,50" http://localhost:8080/
@@ -90,6 +93,7 @@
     <ul class="list-disc ml-6 text-sm">
       <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Random-Delay: 100,500</code></li>
       <li><strong>Env</strong>: <code class="bg-gray-100 px-1 rounded">ECHO_RANDOM_DELAY=50,200</code></li>
+      <li><strong>Bounds</strong>: Max capped at 300000ms</li>
       <li><strong>Example</strong>:</li>
     </ul>
     <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Random-Delay: 100,300" http://localhost:8080/
@@ -100,6 +104,7 @@
     <ul class="list-disc ml-6 text-sm">
       <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Exponential: 100,3</code> (~400ms + jitter)</li>
       <li><strong>Env</strong>: <code class="bg-gray-100 px-1 rounded">ECHO_EXPONENTIAL=50,2</code></li>
+      <li><strong>Bounds</strong>: Result clamped to 0–300000ms</li>
       <li><strong>Example</strong>:</li>
     </ul>
     <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Exponential: 100,3" http://localhost:8080/
@@ -110,6 +115,7 @@
     <ul class="list-disc ml-6 text-sm">
       <li><strong>Header</strong>: <code class="bg-gray-100 px-1 rounded">X-Echo-Latency: 100ms</code> or <code class="bg-gray-100 px-1 rounded">100-200ms</code></li>
       <li><strong>Env</strong>: <code class="bg-gray-100 px-1 rounded">ECHO_LATENCY=50-150</code></li>
+      <li><strong>Bounds</strong>: Clamped to 0–300000ms</li>
       <li><strong>Example</strong>:</li>
     </ul>
     <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code>curl -H "X-Echo-Latency: 100-200ms" http://localhost:8080/

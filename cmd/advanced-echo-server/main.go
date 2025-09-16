@@ -724,7 +724,7 @@ func echoCustomHeaders(w http.ResponseWriter, r *http.Request) {
 		hostname := config.Hostname
 		configLock.RUnlock()
 		w.Header().Set("X-Echo-Server", hostname)
-		w.Header().Set("X-Echo-Version", "2.0.0")
+		w.Header().Set("X-Echo-Version", "1.0.0")
 		w.Header().Set("X-Echo-Uptime", time.Since(startTime).String())
 	}
 }
@@ -824,7 +824,7 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 		"request_id":   r.Header.Get("X-Request-ID"),
 		"server": map[string]interface{}{
 			"hostname":      hostname,
-			"version":       "2.0.0",
+			"version":       "1.0.0",
 			"go_version":    runtime.Version(),
 			"platform":      runtime.GOOS + "/" + runtime.GOARCH,
 			"start_time":    startTime,

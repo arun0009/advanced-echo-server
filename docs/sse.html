@@ -40,6 +40,7 @@
         <a href="/advanced-echo-server/sse.html" aria-current="page" class="text-white font-medium">SSE</a>
         <a href="/advanced-echo-server/history-replay.html" class="hover:text-white">History & Replay</a>
         <a href="/advanced-echo-server/observability.html" class="hover:text-white">Observability</a>
+        <a href="/advanced-echo-server/security.html" class="hover:text-white">Security &amp; Protocols</a>
         <a href="/advanced-echo-server/api-reference.html" class="hover:text-white">API Reference</a>
       </div>
     </nav>
@@ -82,7 +83,7 @@
     <h3 class="text-base font-medium mb-2 mt-4">Notes</h3>
     <ul class="list-disc ml-6 text-sm">
       <li>Keep-alive comments sent every 1s to maintain connection.</li>
-      <li>No rate limiting applied to SSE.</li>
+      <li>No rate limiting applied to SSE (explicitly bypassed).</li>
       <li>Context cancellation closes stream on client disconnect.</li>
       <li>Events are not logged to avoid overhead.</li>
     </ul>
