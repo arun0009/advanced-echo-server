@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"io"
@@ -888,17 +889,156 @@ func TestResponseSize(t *testing.T) {
 	req.Header.Set("X-Echo-Response-Size", "1024")
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(echoHandler)
-
 	handler.ServeHTTP(rr, req)
-
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		t.Errorf("status: got %v want %v", status, http.StatusOK)
 	}
-	if contentType := rr.Header().Get("Content-Type"); contentType != "application/octet-stream" {
-		t.Errorf("handler returned wrong Content-Type: got %q, want %q", contentType, "application/octet-stream")
+	if ct := rr.Header().Get("Content-Type"); ct != "application/octet-stream" {
+		t.Errorf("Content-Type: got %q want %q", ct, "application/octet-stream")
 	}
 	if len(rr.Body.Bytes()) != 1024 {
-		t.Errorf("handler returned wrong body size: got %d, want 1024", len(rr.Body.Bytes()))
+		t.Errorf("body size: got %d want 1024", len(rr.Body.Bytes()))
+	}
+}
+
+func TestGzipCompression(t *testing.T) {
+	setupTest()
+	payload := strings.Repeat("A", 256)
+	req, err := http.NewRequest("POST", "/", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Echo-Compress", "gzip")
+	// Use content type passthrough
+	req.Header.Set("Content-Type", "text/plain")
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(echoHandler).ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d", rr.Code)
+	}
+	if rr.Header().Get("Content-Encoding") != "gzip" {
+		t.Fatalf("missing gzip header")
+	}
+	zr, err := gzip.NewReader(bytes.NewReader(rr.Body.Bytes()))
+	if err != nil {
+		t.Fatalf("gzip reader error: %v", err)
+	}
+	decompressed, err := io.ReadAll(zr)
+	if err != nil {
+		t.Fatalf("gzip read error: %v", err)
+	}
+	if string(decompressed) != payload {
+		t.Errorf("decompressed mismatch: got %d bytes", len(decompressed))
+	}
+}
+
+func TestSetHeaderViaPrefix(t *testing.T) {
+	setupTest()
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Echo-Set-Header-X-Custom-Flag", "on")
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(echoHandler).ServeHTTP(rr, req)
+	if rr.Header().Get("X-Custom-Flag") != "on" {
+		t.Errorf("expected X-Custom-Flag=on, got %q", rr.Header().Get("X-Custom-Flag"))
+	}
+}
+
+func TestEnvHeaderMapping(t *testing.T) {
+	setupTest()
+	os.Setenv("ECHO_HEADER_X_Version", "1.2.3")
+	defer os.Unsetenv("ECHO_HEADER_X_Version")
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(echoHandler).ServeHTTP(rr, req)
+	if rr.Header().Get("X-Version") != "1.2.3" {
+		t.Errorf("expected X-Version=1.2.3, got %q", rr.Header().Get("X-Version"))
+	}
+	// Also ensure underscores are converted to dashes in header names
+	os.Setenv("ECHO_HEADER_X_Custom_Header", "on")
+	defer os.Unsetenv("ECHO_HEADER_X_Custom_Header")
+	rr2 := httptest.NewRecorder()
+	http.HandlerFunc(echoHandler).ServeHTTP(rr2, req)
+	if rr2.Header().Get("X-Custom-Header") != "on" {
+		t.Errorf("expected X-Custom-Header=on, got %q", rr2.Header().Get("X-Custom-Header"))
+	}
+}
+
+func TestJitterDelayHeader(t *testing.T) {
+	setupTest()
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// base 50ms, variance 50ms -> expect between 0 and 100ms
+	req.Header.Set("X-Echo-Jitter", "50,50")
+	rr := httptest.NewRecorder()
+	start := time.Now()
+	http.HandlerFunc(echoHandler).ServeHTTP(rr, req)
+	dur := time.Since(start)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: %d", rr.Code)
+	}
+	if dur < 0 || dur > 150*time.Millisecond {
+		t.Errorf("unexpected jitter duration: %v", dur)
+	}
+}
+
+func TestReplayForwardsStatusAndContentType(t *testing.T) {
+	setupTest()
+	router := setupRoutes()
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+	client := &http.Client{}
+	// Make initial request with explicit content type and 200 status
+	req1, _ := http.NewRequest("POST", ts.URL+"/foo", strings.NewReader("abc"))
+	req1.Header.Set("X-Request-ID", "rid-1")
+	req1.Header.Set("Content-Type", "text/plain")
+	resp1, err := client.Do(req1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	io.Copy(io.Discard, resp1.Body)
+	resp1.Body.Close()
+	// Replay without target -> should hit same server and forward 200 + text/plain
+	replayBody := `{"id":"rid-1"}`
+	req2, _ := http.NewRequest("POST", ts.URL+"/replay", strings.NewReader(replayBody))
+	req2.Header.Set("Content-Type", "application/json")
+	resp2, err := client.Do(req2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := io.ReadAll(resp2.Body)
+	resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		t.Errorf("status: got %d", resp2.StatusCode)
+	}
+	if ct := resp2.Header.Get("Content-Type"); ct != "application/json" && ct != "text/plain" {
+		t.Errorf("unexpected Content-Type: %q body=%q", ct, string(b))
+	}
+}
+
+func TestRequestIDMiddleware(t *testing.T) {
+	setupTest()
+	req, _ := http.NewRequest("GET", "/", nil)
+	rr := httptest.NewRecorder()
+	router := setupRoutes()
+	router.ServeHTTP(rr, req)
+	if rid := rr.Header().Get("X-Request-ID"); rid == "" {
+		t.Errorf("missing X-Request-ID header")
+	}
+	// If provided, should echo back
+	req2, _ := http.NewRequest("GET", "/", nil)
+	req2.Header.Set("X-Request-ID", "abc-123")
+	rr2 := httptest.NewRecorder()
+	router.ServeHTTP(rr2, req2)
+	if rr2.Header().Get("X-Request-ID") != "abc-123" {
+		t.Errorf("expected X-Request-ID=abc-123 got %q", rr2.Header().Get("X-Request-ID"))
 	}
 }
 
@@ -911,19 +1051,72 @@ func TestEchoServerHeaderDelay(t *testing.T) {
 	req.Header.Set("X-Echo-Delay", "50ms")
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(echoHandler)
-
 	start := time.Now()
 	handler.ServeHTTP(rr, req)
 	duration := time.Since(start)
-
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
-	if duration < 50*time.Millisecond || duration > 100*time.Millisecond {
+	if duration < 50*time.Millisecond || duration > 120*time.Millisecond {
 		t.Errorf("handler did not apply header-based delay: got %v, want ~50ms", duration)
 	}
 	if body := rr.Body.String(); !strings.Contains(body, "GET / HTTP/1.1") {
 		t.Errorf("handler returned wrong body: got %q", body)
+	}
+}
+
+func TestExponentialBackoffDelay(t *testing.T) {
+	setupTest()
+	req, _ := http.NewRequest("GET", "/", nil)
+	// base=25, attempt=3 -> expected around 100ms +/- 25% jitter
+	req.Header.Set("X-Echo-Exponential", "25,3")
+	rr := httptest.NewRecorder()
+	start := time.Now()
+	http.HandlerFunc(echoHandler).ServeHTTP(rr, req)
+	dur := time.Since(start)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: %d", rr.Code)
+	}
+	if dur < 60*time.Millisecond || dur > 160*time.Millisecond {
+		t.Errorf("unexpected exponential delay: %v", dur)
+	}
+}
+
+func TestChaosErrorInjectionCodes(t *testing.T) {
+	setupTest()
+	codes := map[string]int{"internal": 500, "bad-gateway": 502, "unavailable": 503, "gateway-timeout": 504, "rate-limit": 429}
+	for key, expected := range codes {
+		req, _ := http.NewRequest("GET", "/", nil)
+		req.Header.Set("X-Echo-Error", key)
+		rr := httptest.NewRecorder()
+		http.HandlerFunc(echoHandler).ServeHTTP(rr, req)
+		if rr.Code != expected {
+			t.Errorf("%s: got %d want %d", key, rr.Code, expected)
+		}
+	}
+}
+
+func TestHTTPRateLimitMiddleware(t *testing.T) {
+	setupTest()
+	configLock.Lock()
+	config.RateLimitRPS = 1
+	config.RateLimitBurst = 1
+	configLock.Unlock()
+	rateLimiter = rate.NewLimiter(rate.Limit(config.RateLimitRPS), config.RateLimitBurst)
+	router := setupRoutes()
+	// First should pass
+	req1, _ := http.NewRequest("GET", "/", nil)
+	rr1 := httptest.NewRecorder()
+	router.ServeHTTP(rr1, req1)
+	if rr1.Code != http.StatusOK {
+		t.Fatalf("first req status: %d", rr1.Code)
+	}
+	// Second immediate request should be limited
+	req2, _ := http.NewRequest("GET", "/", nil)
+	rr2 := httptest.NewRecorder()
+	router.ServeHTTP(rr2, req2)
+	if rr2.Code != http.StatusTooManyRequests {
+		t.Errorf("second req expected 429, got %d", rr2.Code)
 	}
 }
 

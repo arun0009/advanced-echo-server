@@ -11,6 +11,7 @@ import (
 	"embed"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log"
@@ -115,7 +116,7 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "echo_request_duration_seconds",
 			Help:    "Request latency in seconds",
-			Buckets: prometheus.LinearBuckets(0.01, 0.05, 10),
+			Buckets: prometheus.ExponentialBuckets(0.01, 2, 15), // ~10ms to ~163s
 		},
 	)
 	chaosErrors = prometheus.NewCounterVec(
@@ -208,11 +209,10 @@ func setupRoutes() *mux.Router {
 	router.HandleFunc("/info", infoHandler).Methods("GET")
 
 	// WebSocket and SSE endpoints
-	router.HandleFunc("/ws", websocketHandler)
+
 	router.HandleFunc("/sse", sseHandler)
 
-	// Embedded frontend for WebSocket and SSE
-	router.HandleFunc("/web-ws", serveFrontendWS)
+	// Embedded frontend for SSE
 	router.HandleFunc("/web-sse", serveFrontendSSE)
 
 	// Request history and replay
@@ -1037,8 +1037,9 @@ func replayHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	// Forward status code and Content-Type from upstream
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	w.WriteHeader(resp.StatusCode)
 	w.Write(replayBody)
 }
 
@@ -1149,6 +1150,9 @@ func generateSelfSignedCert() {
 	if err != nil {
 		log.Fatalf("Failed to generate private key: %v", err)
 	}
+
+	hostname, _ := os.Hostname()
+
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
@@ -1159,27 +1163,34 @@ func generateSelfSignedCert() {
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost", hostname},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
 	}
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+
+	derCert, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
 	if err != nil {
 		log.Fatalf("Failed to create certificate: %v", err)
 	}
-	certFile, err := os.Create(config.CertFile)
+
+	certOut, err := os.OpenFile(config.CertFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		log.Fatalf("Failed to create certificate file: %v", err)
+		log.Fatalf("Failed to open cert file: %v", err)
 	}
-	defer certFile.Close()
-	pemBytes := bytes.NewBuffer([]byte{})
-	pemBytes.Write(derBytes)
-	io.Copy(certFile, pemBytes)
-	keyFile, err := os.Create(config.KeyFile)
+	defer certOut.Close()
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derCert}); err != nil {
+		log.Fatalf("Failed to write cert PEM: %v", err)
+	}
+
+	keyOut, err := os.OpenFile(config.KeyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("Failed to create key file: %v", err)
+		log.Fatalf("Failed to open key file: %v", err)
 	}
-	defer keyFile.Close()
-	pemKey := bytes.NewBuffer([]byte{})
-	pemKey.Write(x509.MarshalPKCS1PrivateKey(privateKey))
-	io.Copy(keyFile, pemKey)
+	defer keyOut.Close()
+	keyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	if err := pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: keyBytes}); err != nil {
+		log.Fatalf("Failed to write key PEM: %v", err)
+	}
+
 	log.Println("Successfully generated self-signed certificate and key.")
 }
 

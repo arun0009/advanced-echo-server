@@ -131,11 +131,14 @@ docker-compose up -d
 | Feature | HTTP Header | Environment Variable | Example Values |
 |---|---|---|---|
 | **Simple Delay** | `X-Echo-Delay` | `ECHO_DELAY` | `1000ms` (1 second) |
+| **Jitter Delay** | `X-Echo-Jitter` | `ECHO_JITTER` | `base_ms,variance_ms` (e.g., `100,50`) |
 | **Random Delay** | `X-Echo-Random-Delay` | `ECHO_RANDOM_DELAY` | `100,500` (100-500ms) |
+| **Exponential Backoff** | `X-Echo-Exponential` | `ECHO_EXPONENTIAL` | `base_ms,attempt` (e.g., `100,3`) |
 | **Latency Injection** | `X-Echo-Latency` | `ECHO_LATENCY` | `500ms`, `100-500ms` |
 | **Force Status** | `X-Echo-Status` | `ECHO_STATUS` | `404`, `500`, `503` |
 | **Simulate Error** | `X-Echo-Error` | `ECHO_ERROR` | `500`, `timeout`, `random` |
 | **Chaos Rate** | `X-Echo-Chaos` | `ECHO_CHAOS` | `10` (10% failure rate) |
+| **Server Info Headers** | `X-Echo-Server-Info` | `ECHO_SERVER_INFO` | `true` |
 | **Custom Headers** | `X-Echo-Set-Header-*` | `ECHO_HEADER_*` | `ECHO_HEADER_X_Version=1.2.3` |
 
 # Scenario Configuration (YAML)
@@ -342,7 +345,9 @@ services:
 | `ANY` | `/` | Main echo endpoint - accepts any HTTP method |
 | `GET` | `/health` | Health check endpoint |
 | `GET` | `/ready` | Readiness check endpoint|
-| `GET` | `/info` | Server information and configuration |
+| `GET` | `/info` | Request and server metadata (JSON) |
+| `GET` | `/ws` | WebSocket endpoint (echo) |
+| `GET` | `/sse` | Server-Sent Events stream |
 | `GET` | `/web-ws` | WebSocket testing interface |
 | `GET` | `/web-sse` | Server-Sent Events testing interface |
 | `GET` | `/history` | View recorded requests |
