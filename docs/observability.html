@@ -108,24 +108,67 @@ curl http://localhost:8080/info
           <tbody class="divide-y divide-gray-100">
             <tr class="even:bg-gray-50">
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">LOG_REQUESTS</code></td>
-              <td class="px-3 py-2 align-top">Log all HTTP requests</td>
+              <td class="px-3 py-2 align-top">Log basic request and completion lines: <code class="bg-gray-100 px-1 rounded">remote method path</code> and <code class="bg-gray-100 px-1 rounded">remote method path - status duration</code></td>
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">true</code></td>
               <td class="px-3 py-2 align-top">true, false</td>
             </tr>
             <tr class="even:bg-gray-50">
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">LOG_HEADERS</code></td>
-              <td class="px-3 py-2 align-top">Include request headers</td>
+              <td class="px-3 py-2 align-top">Include request headers (exact key: value pairs as received)</td>
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">false</code></td>
               <td class="px-3 py-2 align-top">true, false</td>
             </tr>
             <tr class="even:bg-gray-50">
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">LOG_BODY</code></td>
-              <td class="px-3 py-2 align-top">Include request body in logs (skipped for SSE)</td>
+              <td class="px-3 py-2 align-top">Include request body in logs (skipped for <code class="bg-gray-100 px-1 rounded">/sse</code>; truncated by <code class="bg-gray-100 px-1 rounded">MAX_LOG_BODY_SIZE</code>)</td>
               <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">false</code></td>
               <td class="px-3 py-2 align-top">true, false</td>
             </tr>
+            <tr class="even:bg-gray-50">
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">LOG_TRANSACTION</code></td>
+              <td class="px-3 py-2 align-top">Log a consolidated transaction block with request and response details (headers optional; bodies follow LOG_BODY/LOG_RESPONSE_BODY and are truncated by MAX_LOG_BODY_SIZE; SSE bodies omitted)</td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">false</code></td>
+              <td class="px-3 py-2 align-top">true, false</td>
+            </tr>
+            <tr class="even:bg-gray-50">
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">LOG_RESPONSE</code></td>
+              <td class="px-3 py-2 align-top">Log response completion summary and, if enabled below, headers and/or body</td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">false</code></td>
+              <td class="px-3 py-2 align-top">true, false</td>
+            </tr>
+            <tr class="even:bg-gray-50">
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">LOG_RESPONSE_HEADERS</code></td>
+              <td class="px-3 py-2 align-top">Include response headers in logs</td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">false</code></td>
+              <td class="px-3 py-2 align-top">true, false</td>
+            </tr>
+            <tr class="even:bg-gray-50">
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">LOG_RESPONSE_BODY</code></td>
+              <td class="px-3 py-2 align-top">Include response body in logs (skipped for <code class="bg-gray-100 px-1 rounded">/sse</code>; truncated by <code class="bg-gray-100 px-1 rounded">MAX_LOG_BODY_SIZE</code>)</td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">false</code></td>
+              <td class="px-3 py-2 align-top">true, false</td>
+            </tr>
+            <tr class="even:bg-gray-50">
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">MAX_LOG_BODY_SIZE</code></td>
+              <td class="px-3 py-2 align-top">Max bytes to log for request/response bodies (truncation)</td>
+              <td class="px-3 py-2 align-top"><code class="bg-gray-100 px-1 rounded">2048</code></td>
+              <td class="px-3 py-2 align-top">integer</td>
+            </tr>
           </tbody>
         </table>
+        <p class="text-xs text-gray-600 mt-2">Tip: Use <code class="bg-gray-100 px-1 rounded">X-Request-ID</code> (auto-generated when absent) to correlate request and response logs. Completion lines include status and duration.</p>
+
+        <h4 class="font-medium text-sm mt-4">Sample log output</h4>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto shadow-sm ring-1 ring-gray-800"><code># LOG_REQUESTS=true, LOG_HEADERS=true, LOG_BODY=true, LOG_TRANSACTION=true, LOG_RESPONSE=true,
+# LOG_RESPONSE_HEADERS=true, LOG_RESPONSE_BODY=true (bodies truncated by MAX_LOG_BODY_SIZE)
+127.0.0.1:54321 POST /api/orders
+Headers: map[Content-Type:[application/json] X-Request-Id:[abc123]]
+Body: {"id":42,"item":"widget"}
+cURL: curl -X POST -H "Content-Type: application/json" -H "X-Request-Id: abc123" --data '{"id":42,"item":"widget"}' http://localhost:8080/api/orders
+127.0.0.1:54321 POST /api/orders - 200 12.3ms
+Response headers: map[Content-Type:[application/json] X-Request-Id:[abc123]]
+Response body: {"id":42,"item":"widget","echo":true}
+</code></pre>
       </div>
     </section>
   </main>

@@ -33,5 +33,7 @@ go.work.sum
 *.iml
 .idea/
 .DS-Store
-advanced-echo-server
 .zencoder
+advanced-echo-server
+!advanced-echo-server/
+**/.DS_Store

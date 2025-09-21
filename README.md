@@ -112,9 +112,14 @@ docker-compose up -d
 | `CERT_FILE` | TLS certificate path | `server.crt` | `CERT_FILE=/certs/app.crt` |
 | `KEY_FILE` | TLS private key path | `server.key` | `KEY_FILE=/certs/app.key` |
 | `ENABLE_CORS` | Enable CORS headers | `true` | `ENABLE_CORS=false` |
-| `LOG_REQUESTS` | Log request details | `true` | `LOG_REQUESTS=false` |
+| `LOG_REQUESTS` | Log basic request and completion lines: `remote method path` and `remote method path - status duration` | `true` | `LOG_REQUESTS=false` |
 | `LOG_HEADERS` | Log all headers | `false` | `LOG_HEADERS=true` |
 | `LOG_BODY` | Log request body | `false` | `LOG_BODY=true` |
+| `LOG_TRANSACTION` | Log a consolidated request+response transaction block (headers optional; bodies follow LOG_BODY/LOG_RESPONSE_BODY and are truncated by MAX_LOG_BODY_SIZE; SSE bodies omitted) | `false` | `LOG_TRANSACTION=true` |
+| `LOG_RESPONSE` | Log response completion with optional headers/body | `false` | `LOG_RESPONSE=true` |
+| `LOG_RESPONSE_HEADERS` | Include response headers in logs | `false` | `LOG_RESPONSE_HEADERS=true` |
+| `LOG_RESPONSE_BODY` | Include response body in logs (skipped for SSE) | `false` | `LOG_RESPONSE_BODY=true` |
+| `MAX_LOG_BODY_SIZE` | Max bytes to log for request/response bodies | `2048` | `MAX_LOG_BODY_SIZE=4096` |
 | `MAX_BODY_SIZE` | Max request body size (bytes) | `10485760` | `MAX_BODY_SIZE=1048576` |
 | `ECHO_HISTORY_SIZE` | Max requests to store in history | `100` | `ECHO_HISTORY_SIZE=50` |
 | `ECHO_SCENARIO_FILE` | Path to YAML scenario file | `scenarios.yaml` | `ECHO_SCENARIO_FILE=/config/scenarios.yaml` |
